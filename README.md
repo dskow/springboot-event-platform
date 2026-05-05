@@ -1,9 +1,13 @@
 # springboot-event-platform
 
-An event-driven asset-tracking platform built to demonstrate production-grade
-Java 21 / Spring Boot 4.0 patterns: an API gateway with circuit breakers and
-retries, customer-facing REST ingest, Kafka-backed processing on virtual threads,
-and AWS S3 archival. Runs locally end-to-end with one `docker compose up`.
+An event-driven asset-tracking platform built to demonstrate Java 21 / Spring
+Boot 4.0 patterns: an API gateway with circuit breakers and retries, REST
+ingest, Kafka-backed processing on virtual threads, and AWS S3 archival.
+Runs locally end-to-end with one `docker compose up`.
+
+> **Production-readiness note:** this is portfolio-grade code, not a
+> mission-critical deployment. See [docs/MISSION_CRITICAL_READINESS.md](docs/MISSION_CRITICAL_READINESS.md)
+> for a detailed audit and the in-progress hardening plan.
 
 ## Why this exists
 
@@ -25,7 +29,7 @@ flowchart LR
     Processor -->|batched PutObject| S3[(S3 / LocalStack)]
 ```
 
-Three Spring Boot 3.3 services on Java 21, connected by Apache Kafka, deployable
+Three Spring Boot 4.0 services on Java 21, connected by Apache Kafka, deployable
 locally via Docker Compose. See [docs/architecture.md](docs/architecture.md)
 for the full diagram and failure-mode discussion.
 
@@ -45,7 +49,8 @@ can jump straight to the proof:
 | **Multi-threading** via virtual threads + `@Async` | [`ProcessorApplication.java`](event-processor/src/main/java/com/dskow/eventplatform/processor/ProcessorApplication.java) executor bean, [`EventConsumer.java`](event-processor/src/main/java/com/dskow/eventplatform/processor/kafka/EventConsumer.java) listener |
 | **AWS S3** via SDK v2 | [`S3Config.java`](event-processor/src/main/java/com/dskow/eventplatform/processor/config/S3Config.java), [`S3Archiver.java`](event-processor/src/main/java/com/dskow/eventplatform/processor/s3/S3Archiver.java) |
 | **Docker** multi-stage builds, non-root user | [`event-gateway/Dockerfile`](event-gateway/Dockerfile) and the two siblings |
-| **Bean validation + global error mapping** | `@Valid` on `EventController`, request rejected with 400 for missing `assetId` |
+| **Bean validation** | `@Valid` on `EventController`, request rejected with 400 for missing `assetId` |
+| **Kafka durability** — manual ack after S3 write, retry, DLT for poison pills | [`KafkaConsumerConfig.java`](event-processor/src/main/java/com/dskow/eventplatform/processor/config/KafkaConsumerConfig.java), [`EventConsumer.java`](event-processor/src/main/java/com/dskow/eventplatform/processor/kafka/EventConsumer.java), [`S3Archiver.java`](event-processor/src/main/java/com/dskow/eventplatform/processor/s3/S3Archiver.java) |
 | **Observability** | Spring Actuator + Micrometer Prometheus on every service (`/actuator/prometheus`) |
 | **Tests** with Spring `@WebMvcTest` and pure-unit batching | [`EventControllerTest.java`](event-ingest/src/test/java/com/dskow/eventplatform/ingest/EventControllerTest.java), [`ProcessorApplicationTests.java`](event-processor/src/test/java/com/dskow/eventplatform/processor/ProcessorApplicationTests.java) |
 | **CI** GitHub Actions: Maven build + Docker image build | [`.github/workflows/ci.yml`](.github/workflows/ci.yml) |
@@ -124,7 +129,7 @@ or override `KAFKA_BOOTSTRAP_SERVERS` to point at your own.
 ```
 .
 ├── docker-compose.yml         # full local stack
-├── pom.xml                    # parent: Spring Boot 3.3, Java 21, deps mgmt
+├── pom.xml                    # parent: Spring Boot 4.0, Java 21, deps mgmt
 ├── event-gateway/             # Spring Cloud Gateway + Resilience4j
 ├── event-ingest/              # REST API → Kafka producer
 ├── event-processor/           # Kafka consumer → S3 batch archiver

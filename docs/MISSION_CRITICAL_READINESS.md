@@ -146,14 +146,22 @@ Three Spring Boot 4.0 services on Java 21, connected by Apache Kafka, archiving 
 
 | # | Item | Status | Commit |
 |---|------|--------|--------|
-| QW2 | Fix S3 key collision | ⏳ in progress | — |
-| QW1 | Bound the buffer | ⏳ planned | — |
-| QW3 | `@PreDestroy` flush | ⏳ planned | — |
-| QW4+5+6 | Manual ack + retry + DLT | ⏳ planned | — |
-| QW9 | README fixes | ⏳ planned | — |
+| QW2 | Fix S3 key collision | ✅ done | `fbdca28` |
+| QW1 | Bound the buffer | ✅ done (superseded) | `e3cc481` |
+| QW3 | `@PreDestroy` drain | ✅ done (superseded) | `e3cc481` |
+| QW4+5+6 | Manual ack + retry + DLT | ✅ done | `e22f8d5` |
+| QW9 | README fixes | ⏳ in progress | — |
 | QW7 | Micrometer meters | ⏳ planned | — |
 | QW8 | Testcontainers integration test | future | — |
 | QW10 | Gateway auth + rate limit | future | — |
+
+**Note on supersession:** the bounded buffer and `@PreDestroy` drain
+(`e3cc481`) were the right MVP fixes against the original code shape,
+but the manual-ack refactor (`e22f8d5`) replaced the in-memory buffer
+with Kafka's native poll-based batching. There is no longer a buffer
+to bound or drain — back-pressure flows naturally back to the broker
+and a SIGTERM mid-poll just doesn't ack, so Kafka redelivers on
+restart. The intermediate commit is preserved in history for context.
 
 ---
 
