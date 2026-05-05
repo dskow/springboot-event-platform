@@ -12,19 +12,31 @@ spring:
     consumer:
       group-id: event-processor
       auto-offset-reset: earliest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
+      enable-auto-commit: false
+      max-poll-records: 100
+      key-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
       properties:
+        spring.deserializer.key.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
         spring.json.trusted.packages: com.dskow.eventplatform.processor.model,com.dskow.eventplatform.ingest.model
         spring.json.value.default.type: com.dskow.eventplatform.processor.model.Event
         spring.json.use.type.headers: false
+    producer:
+      # Required so the DLT recoverer can publish poison-pill records.
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JacksonJsonSerializer
+      acks: all
+      properties:
+        enable.idempotence: true
 
 app:
   events-topic: events
+  dlt-topic: events.DLT
   archive-bucket: ${ARCHIVE_BUCKET:event-archive}
-  archive-batch-size: 100
-  archive-buffer-capacity: 10000
-  archive-flush-ms: 5000
+  archive-max-attempts: 3
+  archive-initial-backoff-ms: 100
+  archive-max-backoff-ms: 2000
   s3:
     endpoint: ${S3_ENDPOINT:#{null}}
     region: ${AWS_REGION:us-east-1}
