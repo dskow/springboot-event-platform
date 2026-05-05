@@ -57,14 +57,14 @@ jobs:
             event-processor/target/event-processor-*.jar
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       # Each service gets a per-service gha cache scope so upstream layers
       # (Maven base, JRE runtime, dependency-warming) survive across runs
       # and across both this job and the pentest job. Cold cache: ~4–5 min;
       # warm cache: ~30 s.
       - name: Build event-gateway image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: event-gateway/Dockerfile
@@ -74,7 +74,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=event-gateway
 
       - name: Build event-ingest image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: event-ingest/Dockerfile
@@ -84,7 +84,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=event-ingest
 
       - name: Build event-processor image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: event-processor/Dockerfile
@@ -161,7 +161,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Bring up the full stack
         # The compose.ci.yml override layers gha cache backends onto each
