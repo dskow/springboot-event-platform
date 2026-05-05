@@ -61,34 +61,14 @@
         </dependencies>
     </dependencyManagement>
 
+    <!-- Activate Spring Boot 4's pre-configured CycloneDX SBOM generation.
+         spring-boot-starter-parent ships pluginManagement with a default
+         execution of cyclonedx-maven-plugin#makeAggregateBom bound to the
+         package phase, writing target/classes/META-INF/sbom/application.cdx.json
+         on each module. We just need a bare plugin reference here to
+         activate it; do not add executions or it'll bind a second
+         attachment and trip "artifact ... already attached". -->
     <build>
-        <pluginManagement>
-            <plugins>
-                <!-- CycloneDX SBOM emitted alongside each module's JAR. The
-                     output (target/bom.json + target/bom.xml) is picked up by
-                     CI and surfaced as an artifact, satisfying NIST SSDF PS.3.2
-                     and CICD-SEC-9 (artifact integrity). -->
-                <plugin>
-                    <groupId>org.cyclonedx</groupId>
-                    <artifactId>cyclonedx-maven-plugin</artifactId>
-                    <version>2.9.1</version>
-                    <executions>
-                        <execution>
-                            <id>cyclonedx-package</id>
-                            <phase>package</phase>
-                            <goals>
-                                <goal>makeAggregateBom</goal>
-                            </goals>
-                        </execution>
-                    </executions>
-                    <configuration>
-                        <outputFormat>all</outputFormat>
-                        <schemaVersion>1.5</schemaVersion>
-                        <includeBomSerialNumber>true</includeBomSerialNumber>
-                    </configuration>
-                </plugin>
-            </plugins>
-        </pluginManagement>
         <plugins>
             <plugin>
                 <groupId>org.cyclonedx</groupId>

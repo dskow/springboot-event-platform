@@ -32,16 +32,15 @@ jobs:
         run: mvn -B verify
 
       - name: Upload SBOMs
+        # Spring Boot 4 emits CycloneDX SBOMs at this canonical location
+        # automatically; no custom plugin binding required.
         uses: actions/upload-artifact@v7
         with:
           name: sboms
           path: |
-            event-gateway/target/bom.json
-            event-gateway/target/bom.xml
-            event-ingest/target/bom.json
-            event-ingest/target/bom.xml
-            event-processor/target/bom.json
-            event-processor/target/bom.xml
+            event-gateway/target/classes/META-INF/sbom/application.cdx.json
+            event-ingest/target/classes/META-INF/sbom/application.cdx.json
+            event-processor/target/classes/META-INF/sbom/application.cdx.json
           if-no-files-found: error
 
       - name: Attest build provenance for JARs
