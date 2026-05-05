@@ -197,6 +197,56 @@ of scope for a portfolio piece): plaintext between services + Kafka
 documented, requires production-config split); CORS posture (S11 —
 depends on intended audience).
 
+## Sprint 3 — second-pass anti-pattern review
+
+A fresh audit after sprints 1 and 2 surfaced fifteen findings the
+first two passes missed. Three were genuine bugs (poison-pill
+deserialization not reaching the DLT, batch-record granularity lost
+on retry, body-size cap that does not apply to JSON). The rest were
+hygiene: too-broad exception catches, a test-only public method,
+unused dependencies, lax verb on the fallback route, an actuator
+detail policy that is a no-op given the current auth posture.
+
+| # | Item | File | Status | Commit |
+|---|------|------|--------|--------|
+| F1+F2 | Route poison-pill records to DLT (BatchListenerFailedException + deserialization-exception headers) | `EventConsumer.java`, `KafkaConsumerConfig.java` | ✅ done | (this sprint) |
+| F3 | Cap JSON request body via `server.max-http-request-size` (the existing `max-http-form-post-size` does not apply to JSON) | `event-ingest/application.yml` | ✅ done | (this sprint) |
+| F6 | Narrow `S3Archiver` retry catch to `SdkException` so programmer errors fail fast | `S3Archiver.java` | ✅ done | (this sprint) |
+| F14 | Fail fast on missing archive bucket via `HeadBucket` at startup | `S3Archiver.java` | ✅ done | (this sprint) |
+| F8 | Drop the test-only `getProcessedCount()` seam — the meter is already asserted | `EventConsumer.java`, `ProcessorApplicationTests.java` | ✅ done | (this sprint) |
+| F9 | Tighten `FallbackController` from `@RequestMapping` (all verbs) to `@PostMapping` | `FallbackController.java` | ✅ done | (this sprint) |
+| F12 | Set `health.show-details: never` explicitly (was `when-authorized` with no auth on the management port — same effective behavior, clearer contract) | three `application.yml` | ✅ done | (this sprint) |
+| F13 | Drop unused `spring-boot-starter-kafka-test` from event-ingest | `event-ingest/pom.xml` | ✅ done | (this sprint) |
+
+**Deferred with documented rationale:**
+
+- **F4 / F11 — `event-common` module** — Two `Event` records and two
+  copies of the topic-name default still drift by hand. Folding them
+  into a shared module is the right move but it touches all three
+  service POMs and the parent BOM. Tracked under the existing "Schema
+  registry" item in *Still Open* — same root cause, same fix surface.
+- **F5 — overlapping S3 retry layers** — `S3Archiver` retries 3× and
+  `DefaultErrorHandler` retries the batch 3× more. Worst-case 9
+  PutObject calls before DLT. Intentional (each layer covers a
+  different class of failure), but the budgets should be re-tuned
+  once a real SLO target exists.
+- **F7 — 202 before Kafka ack** — `EventController` returns 202 the
+  moment the producer's `send()` future is registered. With idempotent
+  producer + acks=all + retries the broker write is durable on the
+  happy path, but a broker outage at the moment of send loses the
+  event silently. The fix is to block on the send future with a short
+  timeout and return 503 on failure. Latency contract change — punt
+  to the next behavior sprint.
+- **F10 — `webflux` starter on event-processor** — Pulled in just to
+  host `/actuator/*`. The comment in the POM explains the choice. A
+  switch to `spring-boot-starter-web` (Tomcat) would be lighter for
+  what the processor actually needs but is a stack change with no
+  measured win; leave alone.
+- **F15 — `@JsonInclude` namespace** — Imports
+  `com.fasterxml.jackson.annotation.JsonInclude` while databind is on
+  `tools.jackson.*`. Jackson 3 kept the annotation package under
+  `com.fasterxml`; the imports are correct. No change needed.
+
 ## Still Open
 
 Items that weren't addressed in sprint 1/2 and remain candidates for
