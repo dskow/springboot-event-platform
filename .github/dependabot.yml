@@ -1,0 +1,48 @@
+version: 2
+updates:
+  # Maven — covers parent POM and all three module POMs reachable from /pom.xml.
+  - package-ecosystem: maven
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    groups:
+      spring:
+        patterns:
+          - "org.springframework*"
+          - "io.spring*"
+      aws:
+        patterns:
+          - "software.amazon.awssdk*"
+      testing:
+        patterns:
+          - "org.testcontainers*"
+          - "org.junit*"
+          - "org.mockito*"
+          - "org.assertj*"
+
+  # GitHub Actions — keeps the CI workflow's actions current (security patches
+  # for setup-java, checkout, ZAP scan action, etc.).
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+
+  # Docker base images — one entry per Dockerfile location.
+  - package-ecosystem: docker
+    directory: /event-gateway
+    schedule:
+      interval: weekly
+      day: monday
+  - package-ecosystem: docker
+    directory: /event-ingest
+    schedule:
+      interval: weekly
+      day: monday
+  - package-ecosystem: docker
+    directory: /event-processor
+    schedule:
+      interval: weekly
+      day: monday
