@@ -6,9 +6,18 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # attest-build-provenance needs id-token + attestations to mint a
+      # SLSA L2 provenance statement bound to the produced JARs.
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@v6
 
@@ -19,14 +28,127 @@ jobs:
           java-version: 21
           cache: maven
 
-      - name: Build and test
+      - name: Build, test, and emit CycloneDX SBOM
         run: mvn -B verify
 
-      - name: Build Docker images
-        run: |
-          docker build -f event-gateway/Dockerfile -t event-gateway:ci .
-          docker build -f event-ingest/Dockerfile   -t event-ingest:ci   .
-          docker build -f event-processor/Dockerfile -t event-processor:ci .
+      - name: Upload SBOMs
+        # Spring Boot 4 emits CycloneDX SBOMs at this canonical location
+        # automatically; no custom plugin binding required.
+        uses: actions/upload-artifact@v7
+        with:
+          name: sboms
+          path: |
+            event-gateway/target/classes/META-INF/sbom/application.cdx.json
+            event-ingest/target/classes/META-INF/sbom/application.cdx.json
+            event-processor/target/classes/META-INF/sbom/application.cdx.json
+          if-no-files-found: error
+
+      - name: Attest build provenance for JARs
+        # Produces a signed SLSA v1 provenance statement for each JAR. Keyless
+        # signing via Sigstore + GitHub OIDC; verifiable with
+        # `gh attestation verify <jar> --owner <org>`.
+        if: github.event_name == 'push'
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: |
+            event-gateway/target/event-gateway-*.jar
+            event-ingest/target/event-ingest-*.jar
+            event-processor/target/event-processor-*.jar
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      # Each service gets a per-service gha cache scope so upstream layers
+      # (Maven base, JRE runtime, dependency-warming) survive across runs
+      # and across both this job and the pentest job. Cold cache: ~4–5 min;
+      # warm cache: ~30 s.
+      - name: Build event-gateway image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: event-gateway/Dockerfile
+          load: true
+          tags: event-gateway:ci
+          cache-from: type=gha,scope=event-gateway
+          cache-to: type=gha,mode=max,scope=event-gateway
+
+      - name: Build event-ingest image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: event-ingest/Dockerfile
+          load: true
+          tags: event-ingest:ci
+          cache-from: type=gha,scope=event-ingest
+          cache-to: type=gha,mode=max,scope=event-ingest
+
+      - name: Build event-processor image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: event-processor/Dockerfile
+          load: true
+          tags: event-processor:ci
+          cache-from: type=gha,scope=event-processor
+          cache-to: type=gha,mode=max,scope=event-processor
+
+  codeql:
+    name: CodeQL SAST
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: java-kotlin
+          queries: security-extended
+
+      - name: Build for CodeQL
+        run: mvn -B -DskipTests package
+
+      - name: Run CodeQL analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: java
+
+  trivy:
+    name: Trivy filesystem scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Run Trivy fs scan
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          format: sarif
+          output: trivy-fs.sarif
+          severity: CRITICAL,HIGH,MEDIUM
+          ignore-unfixed: true
+          # Don't fail the build on findings — surface them via GitHub's
+          # code-scanning UI so they're triaged deliberately. Match the
+          # ZAP DAST job's posture for consistency.
+          exit-code: 0
+
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-fs.sarif
+          category: trivy-fs
 
   pentest:
     name: ZAP baseline pen-test
@@ -37,8 +159,14 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
       - name: Bring up the full stack
-        run: docker compose up -d --build
+        # The compose.ci.yml override layers gha cache backends onto each
+        # service's build block — pentest reuses the same per-service cache
+        # the build job populated, so this step warms in ~30 s on a hit.
+        run: docker compose -f docker-compose.yml -f compose.ci.yml up -d --build
 
       - name: Wait for gateway to accept connections
         # /actuator/health lives on the internal management port (9080), which is
@@ -72,4 +200,4 @@ jobs:
 
       - name: Tear down
         if: always()
-        run: docker compose down -v
+        run: docker compose -f docker-compose.yml -f compose.ci.yml down -v

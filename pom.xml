@@ -60,4 +60,20 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
+
+    <!-- Activate Spring Boot 4's pre-configured CycloneDX SBOM generation.
+         spring-boot-starter-parent ships pluginManagement with a default
+         execution of cyclonedx-maven-plugin#makeAggregateBom bound to the
+         package phase, writing target/classes/META-INF/sbom/application.cdx.json
+         on each module. We just need a bare plugin reference here to
+         activate it; do not add executions or it'll bind a second
+         attachment and trip "artifact ... already attached". -->
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.cyclonedx</groupId>
+                <artifactId>cyclonedx-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
 </project>

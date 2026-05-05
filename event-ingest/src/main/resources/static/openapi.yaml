@@ -1,0 +1,160 @@
+openapi: 3.0.3
+info:
+  title: event-ingest API
+  description: |
+    Customer-facing ingest endpoint for the springboot-event-platform.
+    Accepts asset/position events, validates, stamps an id and
+    timestamp if missing, and forwards to Kafka. Errors follow
+    [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457.html).
+  version: 0.1.0
+  contact:
+    name: David Skowronski
+    email: david@dskow.com
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:8080
+    description: Gateway (local Docker Compose)
+
+security:
+  - apiKey: []
+
+paths:
+  /api/events:
+    post:
+      summary: Submit an event
+      description: |
+        Sends an event for asynchronous processing. Returns 202
+        immediately after the request is enqueued; durability is
+        guaranteed by the gateway-side circuit breaker plus the
+        ingest service's idempotent Kafka producer.
+      operationId: ingestEvent
+      parameters:
+        - in: header
+          name: X-API-Key
+          required: true
+          description: API key from the configured allowlist.
+          schema:
+            type: string
+        - in: header
+          name: Idempotency-Key
+          required: false
+          description: |
+            Client-supplied key used as the event id when no `id` is
+            in the body. Lets the same logical operation be retried
+            safely. Per
+            [draft-ietf-httpapi-idempotency-key-header](https://datatracker.ietf.org/doc/draft-ietf-httpapi-idempotency-key-header/).
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9._-]{1,128}$'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+      responses:
+        '202':
+          description: Event accepted for processing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '400':
+          description: Validation or parse failure.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '401':
+          description: Missing or invalid API key.
+        '429':
+          description: Rate limit exceeded.
+        '503':
+          description: Upstream ingest unavailable (circuit breaker open).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  message:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+
+components:
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+  schemas:
+    Event:
+      type: object
+      required: [assetId, latitude, longitude, status]
+      properties:
+        id:
+          type: string
+          maxLength: 128
+          description: |
+            Server-assigned UUID by default. Overridden by request
+            body or by the `Idempotency-Key` header.
+        assetId:
+          type: string
+          maxLength: 64
+          pattern: '^[A-Za-z0-9._-]+$'
+          example: asset-42
+        timestamp:
+          type: string
+          format: date-time
+          description: Defaults to server time at acceptance.
+        latitude:
+          type: number
+          format: double
+          minimum: -90
+          maximum: 90
+          example: 35.7
+        longitude:
+          type: number
+          format: double
+          minimum: -180
+          maximum: 180
+          example: -78.6
+        status:
+          type: string
+          maxLength: 32
+          pattern: '^[a-z][a-z0-9-]*$'
+          example: in-transit
+
+    ProblemDetail:
+      type: object
+      description: |
+        [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457.html)
+        Problem Details for HTTP APIs.
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+        errors:
+          type: array
+          description: Field-level validation errors (when applicable).
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string

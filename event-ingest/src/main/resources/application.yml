@@ -30,6 +30,16 @@ spring:
 app:
   events-topic: events
 
+logging:
+  # Default: human-readable console output. Set LOG_FORMAT=ecs in production
+  # to emit Elastic Common Schema JSON one record per line — log aggregators
+  # (ELK, Loki, Datadog, CloudWatch) parse ECS without an additional grok
+  # pipeline. The traceId/spanId from Micrometer Tracing land on every line
+  # automatically once structured output is enabled.
+  structured:
+    format:
+      console: ${LOG_FORMAT:}
+
 management:
   # Actuator on a separate, internal-only port; see event-gateway for rationale.
   server:

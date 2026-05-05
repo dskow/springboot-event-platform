@@ -15,8 +15,9 @@ After 26+ years building distributed backends — Nortel telecom, defense system
 at Securboration, AWS-native services at Rampart-AI — I wanted a single public
 codebase to point at when conversations turn to "show me the stack." This is
 that repo. The domain (asset/position events) is deliberately generic so the
-same patterns map cleanly to freight rail movements, financial transactions,
-or medical-device telemetry.
+same patterns map cleanly to anywhere a stream of small, schema-bound events
+needs durable, observable, rate-limited ingest — logistics, payments,
+telemetry, IoT, audit trails, click-streams.
 
 ## Architecture
 
@@ -54,6 +55,7 @@ can jump straight to the proof:
 | **Observability** | Spring Actuator + Micrometer Prometheus on every service (`/actuator/prometheus`) |
 | **Tests** with Spring `@WebMvcTest` and pure-unit batching | [`EventControllerTest.java`](event-ingest/src/test/java/com/dskow/eventplatform/ingest/EventControllerTest.java), [`ProcessorApplicationTests.java`](event-processor/src/test/java/com/dskow/eventplatform/processor/ProcessorApplicationTests.java) |
 | **CI** GitHub Actions: Maven build + Docker image build | [`.github/workflows/ci.yml`](.github/workflows/ci.yml) |
+| **OpenAPI 3.0 contract** served by the ingest service | [`openapi.yaml`](event-ingest/src/main/resources/static/openapi.yaml) (reachable at `http://localhost:8081/openapi.yaml`) |
 
 ## Quick start
 

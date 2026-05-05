@@ -53,6 +53,12 @@ app:
     endpoint: ${S3_ENDPOINT:#{null}}
     region: ${AWS_REGION:us-east-1}
 
+logging:
+  # See event-ingest for rationale. Set LOG_FORMAT=ecs to emit ECS JSON.
+  structured:
+    format:
+      console: ${LOG_FORMAT:}
+
 management:
   # Actuator on a separate, internal-only port; see event-gateway for rationale.
   server:

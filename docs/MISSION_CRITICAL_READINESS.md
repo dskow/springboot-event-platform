@@ -7,7 +7,7 @@
 
 ## Verdict
 
-**Portfolio-grade demo, not mission-critical.** The repo demonstrates the right component vocabulary (Spring Cloud Gateway, Resilience4j, Kafka, virtual threads, S3) but ships with **multiple silent data-loss paths**, an unauthenticated customer-facing API, and no end-to-end test of the durable-write path. The README's domain comparisons — "freight rail movements, financial transactions, medical-device telemetry" ([README.md:14-15](../README.md)) — set a bar this code does not yet clear.
+**Portfolio-grade demo, not mission-critical.** The repo demonstrates the right component vocabulary (Spring Cloud Gateway, Resilience4j, Kafka, virtual threads, S3) but ships with **multiple silent data-loss paths**, an unauthenticated customer-facing API, and no end-to-end test of the durable-write path. The README positions the platform as applicable to any small-event ingest domain (logistics, payments, telemetry, IoT, audit trails, click-streams) — that's a bar this code does not yet clear.
 
 A focused 1–2 sprint hardening pass closes the critical gaps. Production deployment in any of those domains additionally requires a schema registry, multi-tenant auth, and proper SRE tooling (tracing, alerting, runbooks).
 
