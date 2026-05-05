@@ -27,10 +27,13 @@ class ProcessorApplicationTests {
         MeterRegistry meters = new SimpleMeterRegistry();
         EventConsumer consumer = new EventConsumer(archiver, meters);
 
-        List<ConsumerRecord<String, Event>> batch = List.of(record("a"), record("b"), record("c"));
+        Event ea = event("a");
+        Event eb = event("b");
+        Event ec = event("c");
+        List<ConsumerRecord<String, Event>> batch = List.of(record(ea), record(eb), record(ec));
         consumer.onBatch(batch, ack);
 
-        Mockito.verify(archiver).archive(List.of(event("a"), event("b"), event("c")));
+        Mockito.verify(archiver).archive(List.of(ea, eb, ec));
         Mockito.verify(ack).acknowledge();
         assertThat(meters.counter("events.archived").count()).isEqualTo(3.0);
         assertThat(meters.counter("archive.batches").count()).isEqualTo(1.0);
@@ -46,7 +49,7 @@ class ProcessorApplicationTests {
             .when(archiver).archive(Mockito.anyList());
         EventConsumer consumer = new EventConsumer(archiver, meters);
 
-        assertThatThrownBy(() -> consumer.onBatch(List.of(record("x")), ack))
+        assertThatThrownBy(() -> consumer.onBatch(List.of(record(event("x"))), ack))
             .isInstanceOf(S3Archiver.ArchiveException.class);
 
         Mockito.verifyNoInteractions(ack);
@@ -77,17 +80,19 @@ class ProcessorApplicationTests {
         MeterRegistry meters = new SimpleMeterRegistry();
         EventConsumer consumer = new EventConsumer(archiver, meters);
 
+        Event ea = event("a");
+        Event eb = event("b");
         List<ConsumerRecord<String, Event>> batch = List.of(
-            record("a"),
-            record("b"),
+            record(ea),
+            record(eb),
             poisonRecord(),
-            record("d"));
+            record(event("d")));
 
         assertThatThrownBy(() -> consumer.onBatch(batch, ack))
             .isInstanceOfSatisfying(BatchListenerFailedException.class,
                 ex -> assertThat(ex.getIndex()).isEqualTo(2));
 
-        Mockito.verify(archiver).archive(List.of(event("a"), event("b")));
+        Mockito.verify(archiver).archive(List.of(ea, eb));
         Mockito.verifyNoInteractions(ack);
         assertThat(meters.counter("events.archived").count()).isEqualTo(2.0);
         assertThat(meters.counter("kafka.deserialization.failures").count()).isEqualTo(1.0);
@@ -123,7 +128,11 @@ class ProcessorApplicationTests {
     }
 
     private ConsumerRecord<String, Event> record(String id) {
-        return new ConsumerRecord<>("events", 0, 0L, "asset-1", event(id));
+        return record(event(id));
+    }
+
+    private ConsumerRecord<String, Event> record(Event e) {
+        return new ConsumerRecord<>("events", 0, 0L, "asset-1", e);
     }
 
     private ConsumerRecord<String, Event> poisonRecord() {
