@@ -2,19 +2,23 @@ package com.dskow.eventplatform.ingest;
 
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.dskow.eventplatform.ingest.api.EventController;
+import com.dskow.eventplatform.ingest.api.ProblemDetailsAdvice;
 import com.dskow.eventplatform.ingest.kafka.EventProducer;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(EventController.class)
+@Import(ProblemDetailsAdvice.class)
 class EventControllerTest {
 
     @Autowired
@@ -179,6 +183,55 @@ class EventControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body))
             .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void validationErrorsReturnRfc9457ProblemDetail() throws Exception {
+        String body = """
+            {
+              "latitude": 0.0,
+              "longitude": 0.0,
+              "status": "unknown"
+            }
+            """;
+
+        mvc.perform(post("/api/events")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isBadRequest())
+            .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+            .andExpect(jsonPath("$.title").value("Validation failed"))
+            .andExpect(jsonPath("$.status").value(400))
+            .andExpect(jsonPath("$.errors[?(@.field == 'assetId')]").exists());
+    }
+
+    @Test
+    void malformedJsonReturnsRfc9457ProblemDetail() throws Exception {
+        mvc.perform(post("/api/events")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{not json"))
+            .andExpect(status().isBadRequest())
+            .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+            .andExpect(jsonPath("$.title").value("Malformed request"));
+    }
+
+    @Test
+    void invalidIdempotencyKeyReturnsRfc9457ProblemDetail() throws Exception {
+        String body = """
+            {
+              "assetId": "asset-1",
+              "latitude": 0.0,
+              "longitude": 0.0,
+              "status": "in-transit"
+            }
+            """;
+        mvc.perform(post("/api/events")
+                .header("Idempotency-Key", "abc\nINJECTED")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isBadRequest())
+            .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+            .andExpect(jsonPath("$.title").value("Invalid Idempotency-Key"));
     }
 
     @Test

@@ -3,9 +3,11 @@ package com.dskow.eventplatform.ingest.api;
 import com.dskow.eventplatform.ingest.kafka.EventProducer;
 import com.dskow.eventplatform.ingest.model.Event;
 import jakarta.validation.Valid;
+import java.net.URI;
 import java.time.Instant;
 import java.util.UUID;
 import java.util.regex.Pattern;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -29,6 +31,11 @@ public class EventController {
     private static final Pattern IDEMPOTENCY_KEY_PATTERN =
         Pattern.compile("^[A-Za-z0-9._-]{1,128}$");
 
+    private static final URI IDEMPOTENCY_TYPE =
+        URI.create("https://datatracker.ietf.org/doc/draft-ietf-httpapi-idempotency-key-header/");
+    private static final URI VALIDATION_TYPE =
+        URI.create("https://www.rfc-editor.org/rfc/rfc9457.html#name-validation-error");
+
     private final EventProducer producer;
 
     public EventController(EventProducer producer) {
@@ -42,18 +49,20 @@ public class EventController {
      * consumers can then dedupe on id.
      */
     @PostMapping
-    public ResponseEntity<Event> ingest(
+    public ResponseEntity<?> ingest(
             @Valid @RequestBody Event incoming,
             @RequestHeader(value = IDEMPOTENCY_KEY_HEADER, required = false) String idempotencyKey) {
         if (idempotencyKey != null && !IDEMPOTENCY_KEY_PATTERN.matcher(idempotencyKey).matches()) {
-            return ResponseEntity.badRequest().build();
+            return problem(IDEMPOTENCY_TYPE, "Invalid Idempotency-Key",
+                "Idempotency-Key must match " + IDEMPOTENCY_KEY_PATTERN.pattern());
         }
         // Defense in depth: @DecimalMin/@DecimalMax on the record reject NaN and
         // ±Infinity in Hibernate Validator (BigDecimal.valueOf throws), but the
         // exception path is implementation-defined. An explicit isFinite check
         // here makes the contract unambiguous and survives a validator swap.
         if (!Double.isFinite(incoming.latitude()) || !Double.isFinite(incoming.longitude())) {
-            return ResponseEntity.badRequest().build();
+            return problem(VALIDATION_TYPE, "Validation failed",
+                "latitude and longitude must be finite");
         }
         String resolvedId;
         if (incoming.id() != null) {
@@ -73,5 +82,13 @@ public class EventController {
         );
         producer.send(stamped);
         return ResponseEntity.accepted().body(stamped);
+    }
+
+    private static ResponseEntity<ProblemDetail> problem(URI type, String title, String detail) {
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(
+            org.springframework.http.HttpStatus.BAD_REQUEST, detail);
+        pd.setType(type);
+        pd.setTitle(title);
+        return ResponseEntity.badRequest().body(pd);
     }
 }
