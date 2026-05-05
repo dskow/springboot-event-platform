@@ -1,5 +1,11 @@
 server:
   port: 8081
+  # Cap the request body size before validation runs. The legitimate event
+  # payload is well under 1 KB; 64 KB leaves room for unusually verbose
+  # serializers without inviting memory-pressure attacks.
+  tomcat:
+    max-http-form-post-size: 64KB
+  max-http-request-header-size: 8KB
 
 spring:
   application:

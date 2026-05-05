@@ -99,4 +99,103 @@ class EventControllerTest {
                 .content(body))
             .andExpect(status().isBadRequest());
     }
+
+    @Test
+    void rejectsLatitudeOutOfRange() throws Exception {
+        String body = """
+            {
+              "assetId": "asset-1",
+              "latitude": 91.0,
+              "longitude": 0.0,
+              "status": "in-transit"
+            }
+            """;
+        mvc.perform(post("/api/events")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void rejectsLongitudeOutOfRange() throws Exception {
+        String body = """
+            {
+              "assetId": "asset-1",
+              "latitude": 0.0,
+              "longitude": 181.0,
+              "status": "in-transit"
+            }
+            """;
+        mvc.perform(post("/api/events")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void rejectsStatusWithUppercaseOrSpecialChars() throws Exception {
+        String body = """
+            {
+              "assetId": "asset-1",
+              "latitude": 0.0,
+              "longitude": 0.0,
+              "status": "In-Transit!"
+            }
+            """;
+        mvc.perform(post("/api/events")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void rejectsAssetIdWithDisallowedChars() throws Exception {
+        String body = """
+            {
+              "assetId": "asset@1",
+              "latitude": 0.0,
+              "longitude": 0.0,
+              "status": "in-transit"
+            }
+            """;
+        mvc.perform(post("/api/events")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void rejectsIdempotencyKeyWithNewline() throws Exception {
+        String body = """
+            {
+              "assetId": "asset-1",
+              "latitude": 0.0,
+              "longitude": 0.0,
+              "status": "in-transit"
+            }
+            """;
+        mvc.perform(post("/api/events")
+                .header("Idempotency-Key", "abc\nINJECTED")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void rejectsIdempotencyKeyOverLengthCap() throws Exception {
+        String body = """
+            {
+              "assetId": "asset-1",
+              "latitude": 0.0,
+              "longitude": 0.0,
+              "status": "in-transit"
+            }
+            """;
+        String oversizedKey = "k".repeat(129);
+        mvc.perform(post("/api/events")
+                .header("Idempotency-Key", oversizedKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isBadRequest());
+    }
 }
