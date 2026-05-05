@@ -1,0 +1,25 @@
+# Compose override applied only in CI: layers GitHub Actions cache backends
+# onto each service's existing build block so successive runs reuse upstream
+# Maven dependency layers and the JRE runtime layer instead of rebuilding
+# from scratch. Local `docker compose up` ignores this file by default.
+services:
+  event-gateway:
+    build:
+      cache_from:
+        - type=gha,scope=event-gateway
+      cache_to:
+        - type=gha,mode=max,scope=event-gateway
+
+  event-ingest:
+    build:
+      cache_from:
+        - type=gha,scope=event-ingest
+      cache_to:
+        - type=gha,mode=max,scope=event-ingest
+
+  event-processor:
+    build:
+      cache_from:
+        - type=gha,scope=event-processor
+      cache_to:
+        - type=gha,mode=max,scope=event-processor
