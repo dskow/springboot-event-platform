@@ -1,6 +1,7 @@
 package com.dskow.eventplatform.processor.s3;
 
 import com.dskow.eventplatform.processor.model.Event;
+import jakarta.annotation.PostConstruct;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -32,6 +33,7 @@ public class S3Archiver {
     private final int maxAttempts;
     private final long initialBackoffMs;
     private final long maxBackoffMs;
+    private final boolean validateBucketOnStartup;
 
     public S3Archiver(
             S3Client s3,
@@ -39,13 +41,42 @@ public class S3Archiver {
             @Value("${app.archive-bucket:event-archive}") String bucket,
             @Value("${app.archive-max-attempts:3}") int maxAttempts,
             @Value("${app.archive-initial-backoff-ms:100}") long initialBackoffMs,
-            @Value("${app.archive-max-backoff-ms:2000}") long maxBackoffMs) {
+            @Value("${app.archive-max-backoff-ms:2000}") long maxBackoffMs,
+            @Value("${app.archive-validate-bucket-on-startup:true}") boolean validateBucketOnStartup) {
         this.s3 = s3;
         this.json = archiveObjectMapper;
         this.bucket = bucket;
         this.maxAttempts = maxAttempts;
         this.initialBackoffMs = initialBackoffMs;
         this.maxBackoffMs = maxBackoffMs;
+        this.validateBucketOnStartup = validateBucketOnStartup;
+    }
+
+    /**
+     * Probe the configured bucket once at startup so a misconfigured deployment
+     * fails the readiness probe immediately instead of taking the first event
+     * batch all the way to the DLT before the operator notices. The check can
+     * be disabled via {@code app.archive-validate-bucket-on-startup=false} for
+     * environments where the bucket is provisioned lazily.
+     */
+    @PostConstruct
+    void verifyBucketAccessible() {
+        if (!validateBucketOnStartup) {
+            log.info("skipping startup bucket check for {} (disabled by config)", bucket);
+            return;
+        }
+        try {
+            s3.headBucket(b -> b.bucket(bucket));
+            log.info("archive bucket {} accessible", bucket);
+        } catch (NoSuchBucketException e) {
+            throw new IllegalStateException(
+                "archive bucket '" + bucket + "' does not exist. Create it before starting the "
+                + "processor, set app.archive-bucket to an existing bucket, or set "
+                + "app.archive-validate-bucket-on-startup=false to skip this check.", e);
+        } catch (SdkException e) {
+            throw new IllegalStateException(
+                "failed to verify archive bucket '" + bucket + "' at startup: " + e.getMessage(), e);
+        }
     }
 
     /**

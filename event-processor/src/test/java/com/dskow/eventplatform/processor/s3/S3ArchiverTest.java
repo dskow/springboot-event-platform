@@ -30,7 +30,7 @@ class S3ArchiverTest {
             .thenReturn(PutObjectResponse.builder().build());
 
         S3Archiver archiver = new S3Archiver(s3, JsonMapper.builder().build(),
-            "test-bucket", 3, 1L, 1L);
+            "test-bucket", 3, 1L, 1L, false);
 
         archiver.archive(batch);
 
@@ -47,7 +47,7 @@ class S3ArchiverTest {
             .thenReturn(PutObjectResponse.builder().build());
 
         S3Archiver archiver = new S3Archiver(s3, JsonMapper.builder().build(),
-            "test-bucket", 3, 1L, 1L);
+            "test-bucket", 3, 1L, 1L, false);
 
         archiver.archive(batch);
 
@@ -62,7 +62,7 @@ class S3ArchiverTest {
             .thenThrow(AwsServiceException.builder().message("persistent").build());
 
         S3Archiver archiver = new S3Archiver(s3, JsonMapper.builder().build(),
-            "test-bucket", 3, 1L, 1L);
+            "test-bucket", 3, 1L, 1L, false);
 
         assertThatThrownBy(() -> archiver.archive(batch))
             .isInstanceOf(S3Archiver.ArchiveException.class)
@@ -79,7 +79,7 @@ class S3ArchiverTest {
             .thenThrow(NoSuchBucketException.builder().message("nope").build());
 
         S3Archiver archiver = new S3Archiver(s3, JsonMapper.builder().build(),
-            "test-bucket", 3, 1L, 1L);
+            "test-bucket", 3, 1L, 1L, false);
 
         assertThatThrownBy(() -> archiver.archive(batch))
             .isInstanceOf(S3Archiver.ArchiveException.class)
@@ -94,7 +94,7 @@ class S3ArchiverTest {
         S3Client s3 = Mockito.mock(S3Client.class);
 
         S3Archiver archiver = new S3Archiver(s3, JsonMapper.builder().build(),
-            "test-bucket", 3, 1L, 1L);
+            "test-bucket", 3, 1L, 1L, false);
 
         archiver.archive(List.of());
 
@@ -109,7 +109,7 @@ class S3ArchiverTest {
             .thenReturn(PutObjectResponse.builder().build());
 
         S3Archiver archiver = new S3Archiver(s3, JsonMapper.builder().build(),
-            "test-bucket", 3, 1L, 1L);
+            "test-bucket", 3, 1L, 1L, false);
 
         archiver.archive(batch);
 
