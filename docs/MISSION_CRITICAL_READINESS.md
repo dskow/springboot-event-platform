@@ -144,6 +144,9 @@ Three Spring Boot 4.0 services on Java 21, connected by Apache Kafka, archiving 
 
 ## Implementation Progress
 
+Sprint 1 (this audit) closed every CRITICAL and HIGH item the doc
+flagged, plus one MEDIUM:
+
 | # | Item | Status | Commit |
 |---|------|--------|--------|
 | QW2 | Fix S3 key collision | ✅ done | `fbdca28` |
@@ -151,9 +154,17 @@ Three Spring Boot 4.0 services on Java 21, connected by Apache Kafka, archiving 
 | QW3 | `@PreDestroy` drain | ✅ done (superseded) | `e3cc481` |
 | QW4+5+6 | Manual ack + retry + DLT | ✅ done | `e22f8d5` |
 | QW9 | README fixes | ✅ done | `f3dae53` |
-| QW7 | Micrometer meters | ✅ done | (this commit) |
-| QW8 | Testcontainers integration test | future | — |
-| QW10 | Gateway auth + rate limit | future | — |
+| QW7 | Micrometer meters | ✅ done | `1f582da` |
+| C6 | POST safe under retry (drop POST from gateway retry + Idempotency-Key header) | ✅ done | `72c3806` |
+| M6+M7 | Dockerfile HEALTHCHECK + Compose memory limits | ✅ done | `59545c5` |
+| QW10 / C5 | Gateway X-API-Key auth + per-key rate limiter | ✅ done | `47fc7f1` |
+| H1 | Distributed tracing (Micrometer Tracing + Brave) end-to-end | ✅ done | `6107c9e` |
+| QW8 | Testcontainers IT proving Kafka → S3 no-loss | ✅ done | `9230bef` |
+
+**Test count:** 2 → 19 (9 in event-processor unit tests, 1 integration
+test asserting end-to-end durability, 9 in event-gateway including 5
+ApiKey + 3 RateLimit + 1 baseline, 4 in event-ingest including the
+new Idempotency-Key path).
 
 **Note on supersession:** the bounded buffer and `@PreDestroy` drain
 (`e3cc481`) were the right MVP fixes against the original code shape,
@@ -162,6 +173,28 @@ with Kafka's native poll-based batching. There is no longer a buffer
 to bound or drain — back-pressure flows naturally back to the broker
 and a SIGTERM mid-poll just doesn't ack, so Kafka redelivers on
 restart. The intermediate commit is preserved in history for context.
+
+## Still Open
+
+Items that weren't addressed in sprint 1 and remain candidates for
+future work:
+
+- **CI hardening** — image vulnerability scanning (Trivy/Grype) and SBOM
+  generation in `.github/workflows/ci.yml`.
+- **Schema registry** — JSON-on-the-wire with no enforced contract; the
+  two `Event` records still drift by hand.
+- **Multi-instance rate limiter** — current limiter is in-memory per
+  pod. Swap in Spring Cloud Gateway's Redis variant for replicated
+  deployments.
+- **DLT consumer** — the DLT topic exists and routes failures, but
+  nothing is monitoring it. Add a small consumer (or alert on lag).
+- **Crash-during-batch IT** — current IT covers the success path; a
+  follow-up should kill the consumer mid-batch and assert no loss
+  after restart.
+- **Distroless / non-Alpine base images** — JVM-on-Alpine has known
+  glibc/musl edges under load.
+- **k8s manifests / Helm chart / Terraform** — README roadmap items
+  for moving past `docker compose up`.
 
 ---
 
