@@ -178,14 +178,24 @@ restart. The intermediate commit is preserved in history for context.
 
 | # | Item | Status | Commit |
 |---|------|--------|--------|
-| — | Dependabot for maven + github-actions + docker | ✅ done | (this sprint) |
-| — | OWASP ZAP baseline pen-test job in CI | ✅ done | (this sprint) |
+| — | Dependabot for maven + github-actions + docker | ✅ done | `289369c` |
+| — | OWASP ZAP baseline pen-test job in CI | ✅ done | `ca97238` |
+| S1 | Auth fail-closed by default (was: open mode silent) | ✅ done | `506e4b2` |
+| S6 | `X-Forwarded-For` honored when `trusted-proxy-hops > 0` | ✅ done | `506e4b2` |
+| S7 | Audit log line on every 401 with redacted key prefix | ✅ done | `506e4b2` |
+| S2 | `Idempotency-Key` validated against `^[A-Za-z0-9._-]{1,128}$` | ✅ done | `08e45dd` |
+| S3 | Body validation: lat/lon range, status pattern, assetId pattern + size | ✅ done | `08e45dd` |
+| — | Request body + header size caps | ✅ done | `08e45dd` |
+| S4 | Actuator on internal-only management port (9080/9081/9082) | ✅ done | `3f6b07b` |
+| S10 | Trimmed actuator exposure to `health,prometheus`, details `when-authorized` | ✅ done | `3f6b07b` |
+| S5 | Rate-limit map bounded via Caffeine (cap + idle eviction) | ✅ done | `a2c7775` |
+| — | Jackson trusted-packages narrowed to one package | ✅ done | `94932d5` |
 
-Outstanding security findings from the dedicated review (see chat) that
-remain candidates for follow-up: failure-open auth default (S1),
-Idempotency-Key validation (S2), body validation gaps (S3), actuator
-exposure on the gateway (S4), unbounded rate-limiter map (S5),
-`X-Forwarded-For` handling (S6), audit logging on 401 (S7).
+Outstanding security findings deferred (need infra changes or are out
+of scope for a portfolio piece): plaintext between services + Kafka
+(S8 — needs TLS cert infrastructure); demo creds in compose (S9 —
+documented, requires production-config split); CORS posture (S11 —
+depends on intended audience).
 
 ## Still Open
 
