@@ -153,6 +153,28 @@ class EventControllerTest {
     }
 
     @Test
+    void rejectsBodyIdWithControlCharacters() throws Exception {
+        // CRLF in the id would forge log lines downstream — bean validation
+        // on Event.id (^[A-Za-z0-9._-]+$) must reject it before the producer
+        // ever sees the record.
+        String body = """
+            {
+              "id": "abc\\nINJECTED",
+              "assetId": "asset-1",
+              "latitude": 0.0,
+              "longitude": 0.0,
+              "status": "in-transit"
+            }
+            """;
+        mvc.perform(post("/api/events")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isBadRequest())
+            .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+            .andExpect(jsonPath("$.errors[?(@.field == 'id')]").exists());
+    }
+
+    @Test
     void rejectsAssetIdWithDisallowedChars() throws Exception {
         String body = """
             {

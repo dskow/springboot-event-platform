@@ -10,7 +10,12 @@ import java.time.Instant;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record Event(
-    @Size(max = 128) String id,
+    // Same alphabet as assetId and the Idempotency-Key pattern. The id flows
+    // unchanged into log lines and into the S3 archive payload; without this
+    // restriction a client could submit {"id": "abc\nINJECTED ..."} and forge
+    // log entries downstream. Server-generated UUIDs and the validated
+    // Idempotency-Key header both already conform.
+    @Size(max = 128) @Pattern(regexp = "^[A-Za-z0-9._-]+$") String id,
     @NotBlank @Size(max = 64) @Pattern(regexp = "^[A-Za-z0-9._-]+$") String assetId,
     Instant timestamp,
     @DecimalMin("-90.0") @DecimalMax("90.0") double latitude,
