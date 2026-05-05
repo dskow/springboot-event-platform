@@ -2,9 +2,10 @@ package com.dskow.eventplatform.processor.s3;
 
 import com.dskow.eventplatform.processor.model.Event;
 import java.time.Instant;
-import tools.jackson.core.JacksonException;
-import tools.jackson.databind.ObjectMapper;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,11 +14,16 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 @Component
 public class S3Archiver {
 
     private static final Logger log = LoggerFactory.getLogger(S3Archiver.class);
+
+    private static final DateTimeFormatter DATE_PREFIX =
+        DateTimeFormatter.ofPattern("yyyy/MM/dd").withZone(ZoneOffset.UTC);
 
     private final S3Client s3;
     private final ObjectMapper json;
@@ -36,7 +42,18 @@ public class S3Archiver {
         if (batch.isEmpty()) {
             return;
         }
-        String key = "events/" + Instant.now().toEpochMilli() + "-" + batch.size() + ".json";
+        // Date-prefixed key with a UUID suffix so concurrent flushes in the same
+        // millisecond cannot collide and silently overwrite a prior batch.
+        Instant now = Instant.now();
+        String key = "events/"
+            + DATE_PREFIX.format(now)
+            + "/"
+            + now.toEpochMilli()
+            + "-"
+            + UUID.randomUUID()
+            + "-"
+            + batch.size()
+            + ".json";
         try {
             byte[] payload = json.writeValueAsBytes(batch);
             s3.putObject(
