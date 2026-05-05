@@ -55,6 +55,7 @@ can jump straight to the proof:
 | **Observability** | Spring Actuator + Micrometer Prometheus on every service (`/actuator/prometheus`) |
 | **Tests** with Spring `@WebMvcTest` and pure-unit batching | [`EventControllerTest.java`](event-ingest/src/test/java/com/dskow/eventplatform/ingest/EventControllerTest.java), [`ProcessorApplicationTests.java`](event-processor/src/test/java/com/dskow/eventplatform/processor/ProcessorApplicationTests.java) |
 | **CI** GitHub Actions: Maven build + Docker image build | [`.github/workflows/ci.yml`](.github/workflows/ci.yml) |
+| **OpenAPI 3.0 contract** served by the ingest service | [`openapi.yaml`](event-ingest/src/main/resources/static/openapi.yaml) (reachable at `http://localhost:8081/openapi.yaml`) |
 
 ## Quick start
 
