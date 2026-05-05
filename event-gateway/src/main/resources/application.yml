@@ -37,8 +37,16 @@ spring:
 
 app:
   security:
-    # Comma-separated list of accepted X-API-Key values. Empty = open mode (dev).
+    # Comma-separated list of accepted X-API-Key values.
     api-keys: ${API_KEYS:}
+    # Default is fail-closed: an empty api-keys is a startup error. Set this to
+    # true to deliberately accept anonymous traffic (e.g. when running behind a
+    # mTLS-terminating mesh that authenticates upstream).
+    allow-open-mode: ${ALLOW_OPEN_MODE:false}
+    # Number of trusted reverse proxies in front of the gateway. The remote IP
+    # used for rate-limit keys and audit logs is taken from X-Forwarded-For
+    # minus this many right-most entries. 0 = trust nothing, use TCP peer.
+    trusted-proxy-hops: ${TRUSTED_PROXY_HOPS:0}
     # Token-bucket parameters per API key (or per remote IP if no key supplied).
     rate-limit-rps: ${RATE_LIMIT_RPS:10}
     rate-limit-burst: ${RATE_LIMIT_BURST:20}

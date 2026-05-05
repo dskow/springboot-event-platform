@@ -1,6 +1,7 @@
 package com.dskow.eventplatform.gateway.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -12,9 +13,19 @@ import reactor.core.publisher.Mono;
 
 class ApiKeyAuthFilterTest {
 
+    private static ApiKeyAuthFilter filter(String csv) {
+        return filter(csv, false);
+    }
+
+    private static ApiKeyAuthFilter filter(String csv, boolean allowOpen) {
+        ApiKeyAuthFilter f = new ApiKeyAuthFilter(csv, allowOpen, 0);
+        f.validateConfiguration();
+        return f;
+    }
+
     @Test
     void rejects401WhenKeyMissing() {
-        ApiKeyAuthFilter filter = new ApiKeyAuthFilter("good-key");
+        ApiKeyAuthFilter filter = filter("good-key");
         MockServerWebExchange exchange = MockServerWebExchange.from(
             MockServerHttpRequest.post("/api/events").build());
         GatewayFilterChain chain = Mockito.mock(GatewayFilterChain.class);
@@ -27,7 +38,7 @@ class ApiKeyAuthFilterTest {
 
     @Test
     void rejects401WhenKeyWrong() {
-        ApiKeyAuthFilter filter = new ApiKeyAuthFilter("good-key");
+        ApiKeyAuthFilter filter = filter("good-key");
         MockServerWebExchange exchange = MockServerWebExchange.from(
             MockServerHttpRequest.post("/api/events")
                 .header(ApiKeyAuthFilter.API_KEY_HEADER, "bad-key")
@@ -42,7 +53,7 @@ class ApiKeyAuthFilterTest {
 
     @Test
     void allowsRequestWhenKeyValid() {
-        ApiKeyAuthFilter filter = new ApiKeyAuthFilter("good-key, another-key");
+        ApiKeyAuthFilter filter = filter("good-key, another-key");
         MockServerWebExchange exchange = MockServerWebExchange.from(
             MockServerHttpRequest.post("/api/events")
                 .header(ApiKeyAuthFilter.API_KEY_HEADER, "another-key")
@@ -58,7 +69,7 @@ class ApiKeyAuthFilterTest {
 
     @Test
     void exemptsActuatorPaths() {
-        ApiKeyAuthFilter filter = new ApiKeyAuthFilter("good-key");
+        ApiKeyAuthFilter filter = filter("good-key");
         MockServerWebExchange exchange = MockServerWebExchange.from(
             MockServerHttpRequest.get("/actuator/health").build());
         GatewayFilterChain chain = Mockito.mock(GatewayFilterChain.class);
@@ -70,8 +81,17 @@ class ApiKeyAuthFilterTest {
     }
 
     @Test
-    void openModeWhenNoKeysConfigured() {
-        ApiKeyAuthFilter filter = new ApiKeyAuthFilter("");
+    void emptyKeyListIsFatalUnlessOpenModeExplicitlyEnabled() {
+        ApiKeyAuthFilter f = new ApiKeyAuthFilter("", false, 0);
+        assertThatThrownBy(f::validateConfiguration)
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("no API keys configured")
+            .hasMessageContaining("allow-open-mode=true");
+    }
+
+    @Test
+    void openModeFlagAllowsEmptyKeyListAndPassesAllRequests() {
+        ApiKeyAuthFilter filter = filter("", true);
         MockServerWebExchange exchange = MockServerWebExchange.from(
             MockServerHttpRequest.post("/api/events").build());
         GatewayFilterChain chain = Mockito.mock(GatewayFilterChain.class);
