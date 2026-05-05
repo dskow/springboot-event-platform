@@ -1,6 +1,6 @@
 # Multi-stage build — built from the repo root so the parent POM is reachable.
 # Build:  docker build -f event-gateway/Dockerfile .
-FROM maven:3.9-eclipse-temurin-21 AS build
+FROM maven:3-eclipse-temurin-26 AS build
 WORKDIR /workspace
 COPY pom.xml .
 COPY event-gateway/pom.xml event-gateway/pom.xml
