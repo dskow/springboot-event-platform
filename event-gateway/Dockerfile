@@ -10,7 +10,7 @@ RUN mvn -B -pl event-gateway -am dependency:go-offline -DskipTests
 COPY event-gateway/src event-gateway/src
 RUN mvn -B -pl event-gateway -am package -DskipTests
 
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app
 RUN apk add --no-cache curl \
  && addgroup -S spring && adduser -S spring -G spring
