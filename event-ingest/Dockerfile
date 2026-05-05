@@ -1,6 +1,7 @@
 # Multi-stage build — built from the repo root so the parent POM is reachable.
 # Build:  docker build -f event-ingest/Dockerfile .
-FROM maven:3-eclipse-temurin-26 AS build
+# See event-gateway/Dockerfile for digest-pinning rationale.
+FROM maven:3-eclipse-temurin-26@sha256:2afabfe1611261e4cc04d49c7819309c07653997b78157f44d86acc200a414f1 AS build
 WORKDIR /workspace
 COPY pom.xml .
 COPY event-gateway/pom.xml event-gateway/pom.xml
@@ -10,7 +11,7 @@ RUN mvn -B -pl event-ingest -am dependency:go-offline -DskipTests
 COPY event-ingest/src event-ingest/src
 RUN mvn -B -pl event-ingest -am package -DskipTests
 
-FROM eclipse-temurin:25-jre-alpine
+FROM eclipse-temurin:25-jre-alpine@sha256:c707c0d18cb9e8556380719f80d96a7529d0746fbb42143893949b98ed2f8943
 WORKDIR /app
 RUN apk add --no-cache curl \
  && addgroup -S spring && adduser -S spring -G spring
