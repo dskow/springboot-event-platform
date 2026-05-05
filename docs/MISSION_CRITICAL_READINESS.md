@@ -174,9 +174,22 @@ to bound or drain — back-pressure flows naturally back to the broker
 and a SIGTERM mid-poll just doesn't ack, so Kafka redelivers on
 restart. The intermediate commit is preserved in history for context.
 
+## Sprint 2 — security pass
+
+| # | Item | Status | Commit |
+|---|------|--------|--------|
+| — | Dependabot for maven + github-actions + docker | ✅ done | (this sprint) |
+| — | OWASP ZAP baseline pen-test job in CI | ✅ done | (this sprint) |
+
+Outstanding security findings from the dedicated review (see chat) that
+remain candidates for follow-up: failure-open auth default (S1),
+Idempotency-Key validation (S2), body validation gaps (S3), actuator
+exposure on the gateway (S4), unbounded rate-limiter map (S5),
+`X-Forwarded-For` handling (S6), audit logging on 401 (S7).
+
 ## Still Open
 
-Items that weren't addressed in sprint 1 and remain candidates for
+Items that weren't addressed in sprint 1/2 and remain candidates for
 future work:
 
 - **CI hardening** — image vulnerability scanning (Trivy/Grype) and SBOM

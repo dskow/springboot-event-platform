@@ -27,3 +27,44 @@ jobs:
           docker build -f event-gateway/Dockerfile -t event-gateway:ci .
           docker build -f event-ingest/Dockerfile   -t event-ingest:ci   .
           docker build -f event-processor/Dockerfile -t event-processor:ci .
+
+  pentest:
+    name: ZAP baseline pen-test
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Bring up the full stack
+        run: docker compose up -d --build
+
+      - name: Wait for gateway to report healthy
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:8080/actuator/health 2>/dev/null | grep -q '"status":"UP"'; then
+              echo "gateway healthy after $((i*5))s"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "gateway never came up — dumping compose logs"
+          docker compose logs --no-color | tail -300
+          exit 1
+
+      - name: ZAP baseline scan
+        # Passive scan only (no attack payloads). Safe to run on every PR.
+        # Reports surface as a job artifact and a workflow summary; the build
+        # is not failed on findings since this is a portfolio app — surface
+        # the report, address findings deliberately rather than reactively.
+        uses: zaproxy/action-baseline@v0.14.0
+        with:
+          target: 'http://localhost:8080'
+          fail_action: false
+          allow_issue_writing: false
+          artifact_name: zap-baseline-report
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
