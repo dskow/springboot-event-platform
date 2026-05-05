@@ -40,13 +40,18 @@ jobs:
       - name: Bring up the full stack
         run: docker compose up -d --build
 
-      - name: Wait for gateway to report healthy
+      - name: Wait for gateway to accept connections
+        # /actuator/health lives on the internal management port (9080), which is
+        # not published. Probe the user-facing route instead — any HTTP status
+        # means the server is up; 401 means auth is wired and the gateway is
+        # responding. 000/connection refused means it's still booting.
         run: |
           for i in $(seq 1 60); do
-            if curl -fsS http://localhost:8080/actuator/health 2>/dev/null | grep -q '"status":"UP"'; then
-              echo "gateway healthy after $((i*5))s"
-              exit 0
-            fi
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/events 2>/dev/null || echo "000")
+            case "$code" in
+              000) ;;
+              *) echo "gateway responding (HTTP $code) after $((i*5))s"; exit 0 ;;
+            esac
             sleep 5
           done
           echo "gateway never came up — dumping compose logs"

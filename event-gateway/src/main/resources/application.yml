@@ -67,13 +67,24 @@ resilience4j:
         timeoutDuration: 5s
 
 management:
+  # Bind actuator to a separate, internal-only port. The main port (8080) is
+  # the user-facing gateway and must not serve operational endpoints; binding
+  # actuator to 9080 means /actuator/* is unreachable from anyone who can only
+  # talk to the published gateway port. The compose file does NOT publish 9080,
+  # so the management surface stays inside the docker network.
+  server:
+    port: 9080
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,prometheus,gateway,circuitbreakers
+        # Trimmed from health,info,metrics,prometheus,gateway,circuitbreakers.
+        # info / metrics / gateway / circuitbreakers all leak operational state
+        # (route definitions, breaker phase, build info) and weren't needed for
+        # liveness or scraping.
+        include: health,prometheus
   endpoint:
     health:
-      show-details: always
+      show-details: when-authorized
   tracing:
     sampling:
       # Demo: trace 100% of requests so every line is correlatable. In production

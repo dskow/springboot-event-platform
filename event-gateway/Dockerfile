@@ -17,6 +17,7 @@ RUN apk add --no-cache curl \
 USER spring:spring
 COPY --from=build /workspace/event-gateway/target/event-gateway-*.jar app.jar
 EXPOSE 8080
+# /actuator lives on the management port (9080), not the user-facing 8080.
 HEALTHCHECK --interval=10s --timeout=3s --start-period=30s --retries=3 \
-  CMD curl -fsS http://localhost:8080/actuator/health | grep -q '"status":"UP"' || exit 1
+  CMD curl -fsS http://localhost:9080/actuator/health | grep -q '"status":"UP"' || exit 1
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]

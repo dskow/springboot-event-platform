@@ -31,13 +31,16 @@ app:
   events-topic: events
 
 management:
+  # Actuator on a separate, internal-only port; see event-gateway for rationale.
+  server:
+    port: 9081
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,prometheus
+        include: health,prometheus
   endpoint:
     health:
-      show-details: always
+      show-details: when-authorized
   tracing:
     sampling:
       probability: 1.0

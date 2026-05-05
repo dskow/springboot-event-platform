@@ -17,6 +17,7 @@ RUN apk add --no-cache curl \
 USER spring:spring
 COPY --from=build /workspace/event-processor/target/event-processor-*.jar app.jar
 EXPOSE 8082
+# /actuator lives on the management port (9082), not 8082.
 HEALTHCHECK --interval=10s --timeout=3s --start-period=30s --retries=3 \
-  CMD curl -fsS http://localhost:8082/actuator/health | grep -q '"status":"UP"' || exit 1
+  CMD curl -fsS http://localhost:9082/actuator/health | grep -q '"status":"UP"' || exit 1
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]
