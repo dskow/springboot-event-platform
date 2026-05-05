@@ -46,6 +46,45 @@ class EventControllerTest {
     }
 
     @Test
+    void usesIdempotencyKeyHeaderAsEventIdWhenBodyIdIsAbsent() throws Exception {
+        String body = """
+            {
+              "assetId": "asset-1",
+              "latitude": 35.7,
+              "longitude": -78.6,
+              "status": "in-transit"
+            }
+            """;
+
+        mvc.perform(post("/api/events")
+                .header("Idempotency-Key", "client-supplied-id-42")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isAccepted())
+            .andExpect(jsonPath("$.id").value("client-supplied-id-42"));
+    }
+
+    @Test
+    void bodyIdWinsOverIdempotencyKeyHeader() throws Exception {
+        String body = """
+            {
+              "id": "body-id",
+              "assetId": "asset-1",
+              "latitude": 0,
+              "longitude": 0,
+              "status": "x"
+            }
+            """;
+
+        mvc.perform(post("/api/events")
+                .header("Idempotency-Key", "header-id")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isAccepted())
+            .andExpect(jsonPath("$.id").value("body-id"));
+    }
+
+    @Test
     void rejectsMissingAssetId() throws Exception {
         String body = """
             {

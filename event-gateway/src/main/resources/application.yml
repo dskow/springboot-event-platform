@@ -18,10 +18,16 @@ spring:
                   args:
                     name: ingestCB
                     fallbackUri: forward:/fallback/events
+                # Only safe (idempotent) methods are retried automatically. Retrying
+                # POSTs from an intermediary risks duplicate processing — the upstream
+                # may have already accepted the request before the failure surface
+                # appeared. Clients that want safe POST retry should send an
+                # Idempotency-Key header; the ingest service uses it as the event id
+                # so downstream consumers can dedupe by it.
                 - name: Retry
                   args:
                     retries: 3
-                    methods: GET,POST
+                    methods: GET
                     statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE,GATEWAY_TIMEOUT
                     backoff:
                       firstBackoff: 100ms
