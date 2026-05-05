@@ -2,6 +2,7 @@ package com.dskow.eventplatform.processor.kafka;
 
 import com.dskow.eventplatform.processor.model.Event;
 import com.dskow.eventplatform.processor.s3.S3Archiver;
+import jakarta.annotation.PreDestroy;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -22,14 +23,16 @@ public class EventConsumer {
 
     private final S3Archiver archiver;
     private final int batchSize;
-    private final BlockingQueue<Event> buffer = new LinkedBlockingQueue<>();
+    private final BlockingQueue<Event> buffer;
     private final AtomicLong processedCount = new AtomicLong();
 
     public EventConsumer(
             S3Archiver archiver,
-            @Value("${app.archive-batch-size:100}") int batchSize) {
+            @Value("${app.archive-batch-size:100}") int batchSize,
+            @Value("${app.archive-buffer-capacity:10000}") int bufferCapacity) {
         this.archiver = archiver;
         this.batchSize = batchSize;
+        this.buffer = new LinkedBlockingQueue<>(bufferCapacity);
     }
 
     /**
@@ -39,9 +42,13 @@ public class EventConsumer {
      */
     @KafkaListener(topics = "${app.events-topic:events}", groupId = "event-processor")
     @Async("processorExecutor")
-    public void onEvent(Event event) {
+    public void onEvent(Event event) throws InterruptedException {
         log.debug("processing event {} for asset {}", event.id(), event.assetId());
-        buffer.offer(event);
+        // put() blocks when the buffer is full so back-pressure flows back to the
+        // Kafka consumer instead of forcing an unbounded heap. Virtual-thread blocking
+        // is cheap; the listener container thread that picked up this record will
+        // simply pause polling.
+        buffer.put(event);
         processedCount.incrementAndGet();
         if (buffer.size() >= batchSize) {
             flush();
@@ -68,5 +75,21 @@ public class EventConsumer {
 
     public long getProcessedCount() {
         return processedCount.get();
+    }
+
+    /**
+     * Drain the buffer to S3 on container shutdown so a rolling deploy does not
+     * silently lose buffered events. Repeats until the buffer is empty since
+     * concurrent producers may still be racing to put() during the shutdown window.
+     */
+    @PreDestroy
+    public void drainOnShutdown() {
+        if (buffer.isEmpty()) {
+            return;
+        }
+        log.info("draining {} buffered events on shutdown", buffer.size());
+        while (!buffer.isEmpty()) {
+            flush();
+        }
     }
 }

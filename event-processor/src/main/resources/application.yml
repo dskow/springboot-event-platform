@@ -23,6 +23,7 @@ app:
   events-topic: events
   archive-bucket: ${ARCHIVE_BUCKET:event-archive}
   archive-batch-size: 100
+  archive-buffer-capacity: 10000
   archive-flush-ms: 5000
   s3:
     endpoint: ${S3_ENDPOINT:#{null}}

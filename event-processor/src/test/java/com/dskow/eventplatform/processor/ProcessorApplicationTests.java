@@ -14,9 +14,9 @@ import org.mockito.Mockito;
 class ProcessorApplicationTests {
 
     @Test
-    void consumerBuffersUntilBatchSizeThenFlushesToArchiver() {
+    void consumerBuffersUntilBatchSizeThenFlushesToArchiver() throws InterruptedException {
         S3Archiver archiver = Mockito.mock(S3Archiver.class);
-        EventConsumer consumer = new EventConsumer(archiver, 3);
+        EventConsumer consumer = new EventConsumer(archiver, 3, 100);
 
         consumer.onEvent(event("a"));
         consumer.onEvent(event("b"));
@@ -29,6 +29,23 @@ class ProcessorApplicationTests {
         Mockito.verify(archiver).archive(captor.capture());
         assertThat(captor.getValue()).hasSize(3);
         assertThat(consumer.getProcessedCount()).isEqualTo(3);
+    }
+
+    @Test
+    void drainOnShutdownFlushesRemainingBuffer() throws InterruptedException {
+        S3Archiver archiver = Mockito.mock(S3Archiver.class);
+        EventConsumer consumer = new EventConsumer(archiver, 100, 100);
+
+        consumer.onEvent(event("x"));
+        consumer.onEvent(event("y"));
+        Mockito.verifyNoInteractions(archiver);
+
+        consumer.drainOnShutdown();
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<Event>> captor = ArgumentCaptor.forClass(List.class);
+        Mockito.verify(archiver).archive(captor.capture());
+        assertThat(captor.getValue()).hasSize(2);
     }
 
     private Event event(String id) {
