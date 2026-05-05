@@ -40,13 +40,13 @@ can jump straight to the proof:
 
 | Skill | Where it lives |
 |---|---|
-| **Java 21** (records, virtual threads, pattern-matching) | [`ProcessorApplication.java`](event-processor/src/main/java/com/dskow/eventplatform/processor/ProcessorApplication.java), all `Event.java` records |
+| **Java 21** records and virtual threads | [`Event.java`](event-ingest/src/main/java/com/dskow/eventplatform/ingest/model/Event.java) (record with bean-validation annotations), [`event-ingest/application.yml`](event-ingest/src/main/resources/application.yml) and [`event-processor/application.yml`](event-processor/src/main/resources/application.yml) (`spring.threads.virtual.enabled: true`) |
 | **Spring Boot 4.0** customer-facing REST API | [`EventController.java`](event-ingest/src/main/java/com/dskow/eventplatform/ingest/api/EventController.java) |
 | **Jackson 3** native serdes via `JacksonJsonSerializer` / `JacksonJsonDeserializer` | [`event-ingest/application.yml`](event-ingest/src/main/resources/application.yml), [`event-processor/application.yml`](event-processor/src/main/resources/application.yml) |
 | **Spring Cloud Gateway** | [`event-gateway/application.yml`](event-gateway/src/main/resources/application.yml) — route definitions, predicates, filters |
 | **Resilience4j circuit breaker + retry** | [`event-gateway/application.yml`](event-gateway/src/main/resources/application.yml) (config), [`FallbackController.java`](event-gateway/src/main/java/com/dskow/eventplatform/gateway/FallbackController.java) (fallback) |
 | **Apache Kafka** producer + consumer | [`EventProducer.java`](event-ingest/src/main/java/com/dskow/eventplatform/ingest/kafka/EventProducer.java), [`EventConsumer.java`](event-processor/src/main/java/com/dskow/eventplatform/processor/kafka/EventConsumer.java) |
-| **Multi-threading** via virtual threads + `@Async` | [`ProcessorApplication.java`](event-processor/src/main/java/com/dskow/eventplatform/processor/ProcessorApplication.java) executor bean, [`EventConsumer.java`](event-processor/src/main/java/com/dskow/eventplatform/processor/kafka/EventConsumer.java) listener |
+| **Concurrency** — Tomcat request threads and Spring's task executors backed by virtual threads | [`event-ingest/application.yml`](event-ingest/src/main/resources/application.yml), [`event-processor/application.yml`](event-processor/src/main/resources/application.yml) (`spring.threads.virtual.enabled: true`); the gateway runs reactive Netty/Webflux instead, so virtual threads don't apply there |
 | **AWS S3** via SDK v2 | [`S3Config.java`](event-processor/src/main/java/com/dskow/eventplatform/processor/config/S3Config.java), [`S3Archiver.java`](event-processor/src/main/java/com/dskow/eventplatform/processor/s3/S3Archiver.java) |
 | **Docker** multi-stage builds, non-root user | [`event-gateway/Dockerfile`](event-gateway/Dockerfile) and the two siblings |
 | **Bean validation** | `@Valid` on `EventController`, request rejected with 400 for missing `assetId` |
