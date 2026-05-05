@@ -209,14 +209,14 @@ detail policy that is a no-op given the current auth posture.
 
 | # | Item | File | Status | Commit |
 |---|------|------|--------|--------|
-| F1+F2 | Route poison-pill records to DLT (BatchListenerFailedException + deserialization-exception headers) | `EventConsumer.java`, `KafkaConsumerConfig.java` | ✅ done | (this sprint) |
-| F3 | Cap JSON request body via `server.max-http-request-size` (the existing `max-http-form-post-size` does not apply to JSON) | `event-ingest/application.yml` | ✅ done | (this sprint) |
-| F6 | Narrow `S3Archiver` retry catch to `SdkException` so programmer errors fail fast | `S3Archiver.java` | ✅ done | (this sprint) |
-| F14 | Fail fast on missing archive bucket via `HeadBucket` at startup | `S3Archiver.java` | ✅ done | (this sprint) |
-| F8 | Drop the test-only `getProcessedCount()` seam — the meter is already asserted | `EventConsumer.java`, `ProcessorApplicationTests.java` | ✅ done | (this sprint) |
-| F9 | Tighten `FallbackController` from `@RequestMapping` (all verbs) to `@PostMapping` | `FallbackController.java` | ✅ done | (this sprint) |
-| F12 | Set `health.show-details: never` explicitly (was `when-authorized` with no auth on the management port — same effective behavior, clearer contract) | three `application.yml` | ✅ done | (this sprint) |
-| F13 | Drop unused `spring-boot-starter-kafka-test` from event-ingest | `event-ingest/pom.xml` | ✅ done | (this sprint) |
+| F1+F2 | Route poison-pill records to DLT (BatchListenerFailedException + deserialization-exception headers) | `EventConsumer.java` | ✅ done | `ad210bc` |
+| F3 | Cap request body at the edge via Spring Cloud Gateway's `RequestSize` filter (the existing `max-http-form-post-size` did not apply to JSON) | `event-gateway/application.yml`, `event-ingest/application.yml` | ✅ done | `2993784` |
+| F6 | Narrow `S3Archiver` retry catch to `SdkException` so programmer errors fail fast | `S3Archiver.java` | ✅ done | `d3a1e13` |
+| F14 | Fail fast on missing archive bucket via `HeadBucket` at startup | `S3Archiver.java` | ✅ done | `baeca54` |
+| F8 | Drop the test-only `getProcessedCount()` seam — the meter is already asserted | `EventConsumer.java`, `ProcessorApplicationTests.java` | ✅ done | `55db8bc` |
+| F9 | Tighten `FallbackController` from `@RequestMapping` (all verbs) to `@PostMapping` | `FallbackController.java` | ✅ done | `06a1880` |
+| F12 | Set `health.show-details: never` explicitly (was `when-authorized` with no auth on the management port — same effective behavior, clearer contract) | three `application.yml` | ✅ done | `12f8152` |
+| F13 | Drop unused `spring-boot-starter-kafka-test` from event-ingest | `event-ingest/pom.xml` | ✅ done | `d9eb800` |
 
 **Deferred with documented rationale:**
 
