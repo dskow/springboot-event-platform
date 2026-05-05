@@ -32,7 +32,7 @@ jobs:
         run: mvn -B verify
 
       - name: Upload SBOMs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sboms
           path: |
