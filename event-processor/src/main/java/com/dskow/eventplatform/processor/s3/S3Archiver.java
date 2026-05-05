@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
@@ -99,7 +100,11 @@ public class S3Archiver {
                 log.error("archive bucket {} does not exist; aborting batch of {}",
                     bucket, batch.size());
                 throw new ArchiveException("bucket missing: " + bucket, e);
-            } catch (RuntimeException e) {
+            } catch (SdkException e) {
+                // Only AWS SDK failures are retried. NPE / IllegalArgumentException
+                // and friends would otherwise burn the retry budget on a programmer
+                // error that won't go away — let those propagate to the Kafka error
+                // handler, which routes the batch to the DLT after its own retries.
                 if (attempt == maxAttempts) {
                     log.error("failed to archive batch of {} to s3://{}/{} after {} attempts",
                         batch.size(), bucket, key, attempt, e);
