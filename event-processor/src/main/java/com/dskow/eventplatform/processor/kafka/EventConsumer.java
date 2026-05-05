@@ -12,8 +12,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.listener.BatchListenerFailedException;
 import org.springframework.kafka.support.Acknowledgment;
+import org.springframework.kafka.support.KafkaUtils;
 import org.springframework.kafka.support.serializer.ErrorHandlingDeserializer;
-import org.springframework.kafka.support.serializer.SerializationUtils;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -106,12 +106,11 @@ public class EventConsumer {
     private static int findDeserializationFailure(List<ConsumerRecord<String, Event>> records) {
         for (int i = 0; i < records.size(); i++) {
             var headers = records.get(i).headers();
-            // Constants moved from ErrorHandlingDeserializer to SerializationUtils in
-            // Spring Kafka 3.x; Spring Boot 4 ships 4.x where the old re-exports are
-            // gone. The header names ("springDeserializerExceptionValue" / "...Key")
-            // themselves are unchanged.
-            if (headers.lastHeader(SerializationUtils.VALUE_DESERIALIZER_EXCEPTION_HEADER) != null
-                    || headers.lastHeader(SerializationUtils.KEY_DESERIALIZER_EXCEPTION_HEADER) != null) {
+            // Constants moved twice: ErrorHandlingDeserializer → SerializationUtils
+            // (3.x) → KafkaUtils (4.x). The wire-format header names
+            // ("springDeserializerExceptionValue" / "...Key") are unchanged.
+            if (headers.lastHeader(KafkaUtils.VALUE_DESERIALIZER_EXCEPTION_HEADER) != null
+                    || headers.lastHeader(KafkaUtils.KEY_DESERIALIZER_EXCEPTION_HEADER) != null) {
                 return i;
             }
         }

@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.kafka.listener.BatchListenerFailedException;
 import org.springframework.kafka.support.Acknowledgment;
-import org.springframework.kafka.support.serializer.SerializationUtils;
+import org.springframework.kafka.support.KafkaUtils;
 
 class ProcessorApplicationTests {
 
@@ -138,7 +138,7 @@ class ProcessorApplicationTests {
     private ConsumerRecord<String, Event> poisonRecord() {
         ConsumerRecord<String, Event> rec = new ConsumerRecord<>("events", 0, 0L, "asset-1", null);
         rec.headers().add(new RecordHeader(
-            SerializationUtils.VALUE_DESERIALIZER_EXCEPTION_HEADER,
+            KafkaUtils.VALUE_DESERIALIZER_EXCEPTION_HEADER,
             "boom".getBytes()));
         return rec;
     }
