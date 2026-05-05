@@ -19,7 +19,11 @@ spring:
       properties:
         spring.deserializer.key.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
         spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
-        spring.json.trusted.packages: com.dskow.eventplatform.processor.model,com.dskow.eventplatform.ingest.model
+        # Only the processor's own Event record needs to be deserializable; the
+        # ingest module's record is structurally identical but lives in a
+        # different package and is never requested at runtime. Keep the trusted
+        # set as small as possible to shrink Jackson's polymorphic-typing surface.
+        spring.json.trusted.packages: com.dskow.eventplatform.processor.model
         spring.json.value.default.type: com.dskow.eventplatform.processor.model.Event
         spring.json.use.type.headers: false
     producer:
