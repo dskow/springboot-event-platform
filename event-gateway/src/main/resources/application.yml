@@ -14,6 +14,13 @@ spring:
               predicates:
                 - Path=/api/events/**
               filters:
+                # Reject oversized bodies at the edge based on Content-Length
+                # so a multi-MB POST never costs the ingest service a buffer.
+                # The legitimate event payload is well under 1 KB; 64 KiB
+                # leaves room for unusually verbose serializers.
+                - name: RequestSize
+                  args:
+                    maxSize: 65536
                 - name: CircuitBreaker
                   args:
                     name: ingestCB

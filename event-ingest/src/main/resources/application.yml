@@ -1,10 +1,10 @@
 server:
   port: 8081
-  # Cap the request body size before validation runs. The legitimate event
-  # payload is well under 1 KB; 64 KB leaves room for unusually verbose
-  # serializers without inviting memory-pressure attacks.
-  tomcat:
-    max-http-form-post-size: 64KB
+  # Body-size cap is enforced upstream by the gateway's RequestSize filter
+  # (event-gateway/application.yml). Tomcat's max-http-form-post-size only
+  # bounds application/x-www-form-urlencoded parameter parsing — it would
+  # be a no-op against the application/json bodies this endpoint actually
+  # accepts, so we don't pretend to cap here.
   max-http-request-header-size: 8KB
 
 spring:
