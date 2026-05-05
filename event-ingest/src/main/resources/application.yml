@@ -40,7 +40,9 @@ management:
         include: health,prometheus
   endpoint:
     health:
-      show-details: when-authorized
+      # See event-gateway for rationale: management port is internal-only and
+      # has no auth, so when-authorized resolves to "never" — make it explicit.
+      show-details: never
   tracing:
     sampling:
       probability: 1.0

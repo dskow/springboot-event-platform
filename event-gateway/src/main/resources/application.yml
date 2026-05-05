@@ -91,7 +91,10 @@ management:
         include: health,prometheus
   endpoint:
     health:
-      show-details: when-authorized
+      # Management port (9080) is not published outside the docker network and
+      # has no auth wired on it, so when-authorized would resolve to "never"
+      # anyway. Set "never" explicitly so the contract is unambiguous.
+      show-details: never
   tracing:
     sampling:
       # Demo: trace 100% of requests so every line is correlatable. In production
