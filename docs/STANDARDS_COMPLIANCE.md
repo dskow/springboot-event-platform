@@ -12,13 +12,15 @@ is met, partial, or open.
 
 ## Scope
 
-The README compares the domain to "freight rail movements, financial
-transactions, or medical-device telemetry"
-([README.md](../README.md)). That framing pulls in PCI-DSS / HIPAA /
-FDA-style bars *if* real data of those kinds were processed. No PII,
-PHI, or PAN is touched here, so the in-scope standards are those that
-apply to a generic public-internet ingest API + Kafka pipeline + S3
-archive:
+The README positions the platform as a generic asset/position-event
+pipeline applicable across logistics, payments, telemetry, IoT, audit
+trails, and click-streams ([README.md](../README.md)). Specific
+data-class regimes (PCI-DSS for cardholder data, HIPAA for PHI,
+GDPR/CCPA for personal data, FDA 21 CFR Part 11 for regulated medical
+records) only attach when real data of those kinds is actually
+processed; none of those are in scope for the demo, which carries no
+PII, PHI, or PAN. The in-scope standards are those that apply to any
+public-internet ingest API + Kafka pipeline + S3 archive:
 
 - [OWASP API Security Top 10 (2023)](https://owasp.org/API-Security/editions/2023/en/0x11-t10/)
 - [OWASP ASVS 4.0.3](https://owasp.org/www-project-application-security-verification-standard/) (selected controls)
