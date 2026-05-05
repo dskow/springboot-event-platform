@@ -102,10 +102,6 @@ public class EventConsumer {
         ack.acknowledge();
     }
 
-    public long getProcessedCount() {
-        return (long) archivedEvents.count();
-    }
-
     private static int findDeserializationFailure(List<ConsumerRecord<String, Event>> records) {
         for (int i = 0; i < records.size(); i++) {
             var headers = records.get(i).headers();

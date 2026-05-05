@@ -32,7 +32,6 @@ class ProcessorApplicationTests {
 
         Mockito.verify(archiver).archive(List.of(event("a"), event("b"), event("c")));
         Mockito.verify(ack).acknowledge();
-        assertThat(consumer.getProcessedCount()).isEqualTo(3);
         assertThat(meters.counter("events.archived").count()).isEqualTo(3.0);
         assertThat(meters.counter("archive.batches").count()).isEqualTo(1.0);
         assertThat(meters.counter("archive.failures").count()).isZero();
