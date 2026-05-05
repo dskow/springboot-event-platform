@@ -102,6 +102,12 @@ management:
       probability: 1.0
 
 logging:
+  # See event-ingest for rationale. Set LOG_FORMAT=ecs to emit ECS JSON one
+  # record per line; traceId/spanId are added automatically by Micrometer
+  # Tracing once structured output is enabled.
+  structured:
+    format:
+      console: ${LOG_FORMAT:}
   level:
     org.springframework.cloud.gateway: INFO
     io.github.resilience4j: INFO

@@ -60,6 +60,7 @@ services:
       - "8081:8081"
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - LOG_FORMAT=ecs
     depends_on:
       kafka:
         condition: service_healthy
@@ -80,6 +81,7 @@ services:
       - S3_ENDPOINT=http://localstack:4566
       - ARCHIVE_BUCKET=event-archive
       - AWS_REGION=us-east-1
+      - LOG_FORMAT=ecs
     depends_on:
       kafka:
         condition: service_healthy
@@ -102,6 +104,7 @@ services:
       - API_KEYS=demo-key
       - RATE_LIMIT_RPS=10
       - RATE_LIMIT_BURST=20
+      - LOG_FORMAT=ecs
     depends_on:
       event-ingest:
         condition: service_healthy
