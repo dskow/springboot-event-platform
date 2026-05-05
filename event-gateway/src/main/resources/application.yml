@@ -1,0 +1,59 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: event-gateway
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: ingest-route
+              uri: ${INGEST_URL:http://localhost:8081}
+              predicates:
+                - Path=/api/events/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: ingestCB
+                    fallbackUri: forward:/fallback/events
+                - name: Retry
+                  args:
+                    retries: 3
+                    methods: GET,POST
+                    statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE,GATEWAY_TIMEOUT
+                    backoff:
+                      firstBackoff: 100ms
+                      maxBackoff: 1s
+                      factor: 2
+                      basedOnPreviousValue: false
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      ingestCB:
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        permittedNumberOfCallsInHalfOpenState: 3
+        registerHealthIndicator: true
+  timelimiter:
+    instances:
+      ingestCB:
+        timeoutDuration: 5s
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,gateway,circuitbreakers
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO
+    io.github.resilience4j: INFO

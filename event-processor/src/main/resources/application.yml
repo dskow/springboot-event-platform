@@ -1,0 +1,38 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: event-processor
+  threads:
+    virtual:
+      enabled: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: event-processor
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
+      properties:
+        spring.json.trusted.packages: com.dskow.eventplatform.processor.model,com.dskow.eventplatform.ingest.model
+        spring.json.value.default.type: com.dskow.eventplatform.processor.model.Event
+        spring.json.use.type.headers: false
+
+app:
+  events-topic: events
+  archive-bucket: ${ARCHIVE_BUCKET:event-archive}
+  archive-batch-size: 100
+  archive-flush-ms: 5000
+  s3:
+    endpoint: ${S3_ENDPOINT:#{null}}
+    region: ${AWS_REGION:us-east-1}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always

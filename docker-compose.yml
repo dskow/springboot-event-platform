@@ -1,0 +1,87 @@
+services:
+  kafka:
+    image: apache/kafka:4.1.2
+    container_name: sep-kafka
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,PLAINTEXT_HOST://:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 20s
+
+  localstack:
+    image: localstack/localstack:3.7
+    container_name: sep-localstack
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=s3
+      - DEFAULT_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+    volumes:
+      - ./localstack-init:/etc/localstack/init/ready.d
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  event-ingest:
+    build:
+      context: .
+      dockerfile: event-ingest/Dockerfile
+    container_name: sep-ingest
+    ports:
+      - "8081:8081"
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  event-processor:
+    build:
+      context: .
+      dockerfile: event-processor/Dockerfile
+    container_name: sep-processor
+    ports:
+      - "8082:8082"
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - S3_ENDPOINT=http://localstack:4566
+      - ARCHIVE_BUCKET=event-archive
+      - AWS_REGION=us-east-1
+    depends_on:
+      kafka:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+
+  event-gateway:
+    build:
+      context: .
+      dockerfile: event-gateway/Dockerfile
+    container_name: sep-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - INGEST_URL=http://event-ingest:8081
+    depends_on:
+      - event-ingest

@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - name: Build and test
+        run: mvn -B verify
+
+      - name: Build Docker images
+        run: |
+          docker build -f event-gateway/Dockerfile -t event-gateway:ci .
+          docker build -f event-ingest/Dockerfile   -t event-ingest:ci   .
+          docker build -f event-processor/Dockerfile -t event-processor:ci .
