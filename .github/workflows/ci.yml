@@ -6,9 +6,18 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # attest-build-provenance needs id-token + attestations to mint a
+      # SLSA L2 provenance statement bound to the produced JARs.
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@v6
 
@@ -19,14 +28,97 @@ jobs:
           java-version: 21
           cache: maven
 
-      - name: Build and test
+      - name: Build, test, and emit CycloneDX SBOM
         run: mvn -B verify
+
+      - name: Upload SBOMs
+        uses: actions/upload-artifact@v4
+        with:
+          name: sboms
+          path: |
+            event-gateway/target/bom.json
+            event-gateway/target/bom.xml
+            event-ingest/target/bom.json
+            event-ingest/target/bom.xml
+            event-processor/target/bom.json
+            event-processor/target/bom.xml
+          if-no-files-found: error
+
+      - name: Attest build provenance for JARs
+        # Produces a signed SLSA v1 provenance statement for each JAR. Keyless
+        # signing via Sigstore + GitHub OIDC; verifiable with
+        # `gh attestation verify <jar> --owner <org>`.
+        if: github.event_name == 'push'
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: |
+            event-gateway/target/event-gateway-*.jar
+            event-ingest/target/event-ingest-*.jar
+            event-processor/target/event-processor-*.jar
 
       - name: Build Docker images
         run: |
           docker build -f event-gateway/Dockerfile -t event-gateway:ci .
           docker build -f event-ingest/Dockerfile   -t event-ingest:ci   .
           docker build -f event-processor/Dockerfile -t event-processor:ci .
+
+  codeql:
+    name: CodeQL SAST
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: java-kotlin
+          queries: security-extended
+
+      - name: Build for CodeQL
+        run: mvn -B -DskipTests package
+
+      - name: Run CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: java
+
+  trivy:
+    name: Trivy filesystem scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Run Trivy fs scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          format: sarif
+          output: trivy-fs.sarif
+          severity: CRITICAL,HIGH,MEDIUM
+          ignore-unfixed: true
+          # Don't fail the build on findings — surface them via GitHub's
+          # code-scanning UI so they're triaged deliberately. Match the
+          # ZAP DAST job's posture for consistency.
+          exit-code: 0
+
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-fs.sarif
+          category: trivy-fs
 
   pentest:
     name: ZAP baseline pen-test
