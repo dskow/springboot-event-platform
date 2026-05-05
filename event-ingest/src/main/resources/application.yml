@@ -16,6 +16,10 @@ spring:
       properties:
         enable.idempotence: true
         max.in.flight.requests.per.connection: 5
+    template:
+      # Propagate the current trace as Kafka record headers so the processor
+      # picks the same traceId up on the consumer side.
+      observation-enabled: true
 
 app:
   events-topic: events
@@ -28,3 +32,6 @@ management:
   endpoint:
     health:
       show-details: always
+  tracing:
+    sampling:
+      probability: 1.0

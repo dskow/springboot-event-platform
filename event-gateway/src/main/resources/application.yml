@@ -66,6 +66,11 @@ management:
   endpoint:
     health:
       show-details: always
+  tracing:
+    sampling:
+      # Demo: trace 100% of requests so every line is correlatable. In production
+      # you'd back this off to 0.1 or so to control storage costs.
+      probability: 1.0
 
 logging:
   level:

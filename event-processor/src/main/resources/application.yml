@@ -29,6 +29,14 @@ spring:
       acks: all
       properties:
         enable.idempotence: true
+    template:
+      observation-enabled: true
+    listener:
+      # Reads trace context from incoming record headers so the consumer's spans
+      # link back to the producer's request. Combined with template.observation
+      # on the ingest side and 100% sampling, every request has an end-to-end
+      # traceId that appears in all four services' logs.
+      observation-enabled: true
 
 app:
   events-topic: events
@@ -49,3 +57,6 @@ management:
   endpoint:
     health:
       show-details: always
+  tracing:
+    sampling:
+      probability: 1.0
