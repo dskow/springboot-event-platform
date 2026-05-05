@@ -68,10 +68,19 @@ docker compose up --build
 
 Wait for `kafka` to report healthy (~20 s on first run). Then in another shell:
 
+The compose file ships with `API_KEYS=demo-key` set on the gateway, so every
+request needs an `X-API-Key: demo-key` header. The gateway also enforces an
+in-memory rate limit (10 req/s, burst 20) per API key — see
+[`ApiKeyAuthFilter.java`](event-gateway/src/main/java/com/dskow/eventplatform/gateway/security/ApiKeyAuthFilter.java)
+and [`RateLimitFilter.java`](event-gateway/src/main/java/com/dskow/eventplatform/gateway/security/RateLimitFilter.java).
+Pass an `Idempotency-Key` if you want safe retry on POST.
+
 **bash / zsh:**
 ```bash
 curl -X POST http://localhost:8080/api/events \
   -H 'Content-Type: application/json' \
+  -H 'X-API-Key: demo-key' \
+  -H 'Idempotency-Key: req-001' \
   -d '{"assetId":"asset-42","latitude":35.7,"longitude":-78.6,"status":"in-transit"}'
 ```
 
@@ -79,6 +88,7 @@ curl -X POST http://localhost:8080/api/events \
 ```powershell
 Invoke-RestMethod -Uri http://localhost:8080/api/events -Method Post `
   -ContentType 'application/json' `
+  -Headers @{ 'X-API-Key' = 'demo-key'; 'Idempotency-Key' = 'req-001' } `
   -Body '{"assetId":"asset-42","latitude":35.7,"longitude":-78.6,"status":"in-transit"}'
 ```
 
@@ -86,6 +96,8 @@ If you prefer real curl, use `curl.exe` (to bypass the `Invoke-WebRequest` alias
 ```powershell
 curl.exe -X POST http://localhost:8080/api/events `
   -H "Content-Type: application/json" `
+  -H "X-API-Key: demo-key" `
+  -H "Idempotency-Key: req-001" `
   -d '{\"assetId\":\"asset-42\",\"latitude\":35.7,\"longitude\":-78.6,\"status\":\"in-transit\"}'
 ```
 

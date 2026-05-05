@@ -99,6 +99,9 @@ services:
       - "8080:8080"
     environment:
       - INGEST_URL=http://event-ingest:8081
+      - API_KEYS=demo-key
+      - RATE_LIMIT_RPS=10
+      - RATE_LIMIT_BURST=20
     depends_on:
       event-ingest:
         condition: service_healthy

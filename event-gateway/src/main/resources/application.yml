@@ -35,6 +35,14 @@ spring:
                       factor: 2
                       basedOnPreviousValue: false
 
+app:
+  security:
+    # Comma-separated list of accepted X-API-Key values. Empty = open mode (dev).
+    api-keys: ${API_KEYS:}
+    # Token-bucket parameters per API key (or per remote IP if no key supplied).
+    rate-limit-rps: ${RATE_LIMIT_RPS:10}
+    rate-limit-burst: ${RATE_LIMIT_BURST:20}
+
 resilience4j:
   circuitbreaker:
     instances:
