@@ -26,14 +26,30 @@ public class EventProducer {
         kafkaTemplate.send(topic, event.assetId(), event)
             .whenComplete((result, ex) -> {
                 if (ex != null) {
-                    log.error("failed to publish event {}: {}", event.id(), ex.getMessage());
+                    log.error("failed to publish event {}: {}", safeId(event.id()), ex.getMessage());
                 } else {
                     log.debug("published event {} to {}-{}@{}",
-                        event.id(),
+                        safeId(event.id()),
                         result.getRecordMetadata().topic(),
                         result.getRecordMetadata().partition(),
                         result.getRecordMetadata().offset());
                 }
             });
+    }
+
+    /**
+     * Render an event id safely for logs. Bean validation on {@link Event}
+     * already restricts the id to {@code [A-Za-z0-9._-]+} at the controller
+     * boundary; this is defence in depth for any path that constructs an
+     * {@code Event} without that validator (test fixtures, future producers
+     * for a different transport) so a hostile id can't forge log lines via
+     * embedded CR/LF or terminal escape sequences.
+     */
+    static String safeId(String id) {
+        if (id == null) {
+            return "<null>";
+        }
+        String filtered = id.replaceAll("[^A-Za-z0-9._-]", "_");
+        return filtered.length() > 128 ? filtered.substring(0, 128) + "…" : filtered;
     }
 }
