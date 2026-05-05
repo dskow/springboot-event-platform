@@ -150,8 +150,8 @@ Three Spring Boot 4.0 services on Java 21, connected by Apache Kafka, archiving 
 | QW1 | Bound the buffer | ✅ done (superseded) | `e3cc481` |
 | QW3 | `@PreDestroy` drain | ✅ done (superseded) | `e3cc481` |
 | QW4+5+6 | Manual ack + retry + DLT | ✅ done | `e22f8d5` |
-| QW9 | README fixes | ⏳ in progress | — |
-| QW7 | Micrometer meters | ⏳ planned | — |
+| QW9 | README fixes | ✅ done | `f3dae53` |
+| QW7 | Micrometer meters | ✅ done | (this commit) |
 | QW8 | Testcontainers integration test | future | — |
 | QW10 | Gateway auth + rate limit | future | — |
 

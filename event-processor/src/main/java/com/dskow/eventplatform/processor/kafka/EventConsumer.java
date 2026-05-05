@@ -2,8 +2,9 @@ package com.dskow.eventplatform.processor.kafka;
 
 import com.dskow.eventplatform.processor.model.Event;
 import com.dskow.eventplatform.processor.s3.S3Archiver;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -16,10 +17,21 @@ public class EventConsumer {
     private static final Logger log = LoggerFactory.getLogger(EventConsumer.class);
 
     private final S3Archiver archiver;
-    private final AtomicLong processedCount = new AtomicLong();
+    private final Counter archivedEvents;
+    private final Counter archivedBatches;
+    private final Counter archiveFailures;
 
-    public EventConsumer(S3Archiver archiver) {
+    public EventConsumer(S3Archiver archiver, MeterRegistry meters) {
         this.archiver = archiver;
+        this.archivedEvents = Counter.builder("events.archived")
+            .description("Events successfully written to S3")
+            .register(meters);
+        this.archivedBatches = Counter.builder("archive.batches")
+            .description("S3 PutObject calls completed successfully")
+            .register(meters);
+        this.archiveFailures = Counter.builder("archive.failures")
+            .description("S3 archive attempts that exhausted the retry budget")
+            .register(meters);
     }
 
     /**
@@ -40,12 +52,18 @@ public class EventConsumer {
             return;
         }
         log.debug("archiving batch of {} events", events.size());
-        archiver.archive(events);
-        processedCount.addAndGet(events.size());
+        try {
+            archiver.archive(events);
+        } catch (RuntimeException e) {
+            archiveFailures.increment();
+            throw e;
+        }
+        archivedEvents.increment(events.size());
+        archivedBatches.increment();
         ack.acknowledge();
     }
 
     public long getProcessedCount() {
-        return processedCount.get();
+        return (long) archivedEvents.count();
     }
 }
