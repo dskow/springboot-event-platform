@@ -35,6 +35,13 @@
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-tracing-bridge-brave</artifactId>
         </dependency>
+        <!-- Caffeine for the bounded rate-limit bucket cache. Spring Boot's
+             dependency management already pins a version; no explicit version
+             here so it stays in lockstep with Spring's tested combination. -->
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
