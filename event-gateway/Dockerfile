@@ -12,8 +12,11 @@ RUN mvn -B -pl event-gateway -am package -DskipTests
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-RUN addgroup -S spring && adduser -S spring -G spring
+RUN apk add --no-cache curl \
+ && addgroup -S spring && adduser -S spring -G spring
 USER spring:spring
 COPY --from=build /workspace/event-gateway/target/event-gateway-*.jar app.jar
 EXPOSE 8080
+HEALTHCHECK --interval=10s --timeout=3s --start-period=30s --retries=3 \
+  CMD curl -fsS http://localhost:8080/actuator/health | grep -q '"status":"UP"' || exit 1
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]
