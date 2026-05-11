@@ -62,7 +62,7 @@ jobs:
           cosign sign --yes "${{ steps.tags.outputs.image }}@${{ steps.build.outputs.digest }}"
 
       - name: Attest image build provenance
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest-build-provenance@v4
         with:
           subject-name: ${{ steps.tags.outputs.image }}
           subject-digest: ${{ steps.build.outputs.digest }}
