@@ -48,7 +48,7 @@ jobs:
         # signing via Sigstore + GitHub OIDC; verifiable with
         # `gh attestation verify <jar> --owner <org>`.
         if: github.event_name == 'push'
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: |
             event-gateway/target/event-gateway-*.jar
