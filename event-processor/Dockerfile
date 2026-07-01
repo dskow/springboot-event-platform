@@ -11,7 +11,7 @@ RUN mvn -B -pl event-processor -am dependency:go-offline -DskipTests
 COPY event-processor/src event-processor/src
 RUN mvn -B -pl event-processor -am package -DskipTests
 
-FROM eclipse-temurin:25-jre-alpine@sha256:c707c0d18cb9e8556380719f80d96a7529d0746fbb42143893949b98ed2f8943
+FROM eclipse-temurin:25-jre-alpine@sha256:28db6fdf60e38945e43d840c0333aeaec66c15943070104f7586fd3c9d1665b0
 WORKDIR /app
 RUN apk add --no-cache curl \
  && addgroup -S spring && adduser -S spring -G spring
