@@ -1,7 +1,7 @@
 # Multi-stage build — built from the repo root so the parent POM is reachable.
 # Build:  docker build -f event-processor/Dockerfile .
 # See event-gateway/Dockerfile for digest-pinning rationale.
-FROM maven:3-eclipse-temurin-26@sha256:166ca19b6b5fe1e924ab2d66b64ba9854c739f16210b94bbe0074b036c5c7992 AS build
+FROM maven:3-eclipse-temurin-27@sha256:d0d38ebffce1172d5c9c0be2e28691f598f9a91f578858a77d133abeb91434f9 AS build
 WORKDIR /workspace
 COPY pom.xml .
 COPY event-gateway/pom.xml event-gateway/pom.xml
